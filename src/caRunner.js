@@ -387,7 +387,7 @@ module.exports = (code, context, helpers, fulfill, token) => {
             user,
             connectRedis,
         },code);
-        // if (__ts12312) clearTimeout(__ts12312);
+
     } catch (__executionErrors__) {
         result_done({
             error: "exception",
