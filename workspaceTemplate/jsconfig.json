@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "resolveJsonModule": true
+  },
+  "typeAcquisition": {
+    "enable": true,
+    "include": [
+      "request-promise",
+      "redis",
+      "./context.json",
+      "fs",
+      "lodash",
+      "moment",
+      "fast-csv",
+      "md5",
+      "js-sha256",
+      "xml2js",
+      "secure-random",
+      "@turf/turf",
+      "@turf/helpers",
+      "jsonwebtoken",
+      "bluebird",
+      "googleapis",
+      "aws-sdk",
+      "aws-api-gateway-client",
+      "amazon-cognito-identity-js",
+      "express"
+    ]
+  },
+  "include": [
+    "src/**/*",
+    "index.d.ts"
+  ]
+}
