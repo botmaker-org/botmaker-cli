@@ -131,7 +131,7 @@ const run = async (pwd, file, { vars, params, volatile, endpoint, port = 7070 })
   const type = endpoint ? "ENDPOINT" : (ca.type || "USER");
   if (type === "USER") {
     await runUserCa(wpPath, token, cas, ca, vars, params, volatile);
-  } else if (type === "ENDPOINT") {
+  } else if (type === "ENDPOINT" || type === "SCHEDULE") {
     await runEndpointCa(wpPath, token, cas, ca, port);
   } else {
     throw new Error(`'${type}' invalid client action type.`)

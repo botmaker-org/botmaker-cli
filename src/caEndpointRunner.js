@@ -21,6 +21,7 @@ const ___runMain = (
         __require_helper,
         req,
         res,
+        bmconsole,
     },
     ___
 ) => {
@@ -93,6 +94,7 @@ module.exports = (req, res, token, code, helpers ) => {
             __require_helper,
             req,
             res,
+            bmconsole,
         },code);
     } catch (__executionErrors__) {
         res.status(400).send(JSON.stringify(__error__));

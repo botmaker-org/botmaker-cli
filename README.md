@@ -1,7 +1,5 @@
 ## How to install botmaker-cli
-
-#### Steps
-- Run `npm i -g @botmaker.org/botmaker-cli` on bash command-line.
+- Run `npm i -g @botmaker.org/botmaker-cli`
 
 #### Problems on windows?  
 - Failed `node-gyp` rebuild and/or `python 2.7` issue  
