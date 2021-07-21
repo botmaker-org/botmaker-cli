@@ -97,6 +97,7 @@ module.exports = (req, res, token, code, helpers ) => {
             bmconsole,
         },code);
     } catch (__executionErrors__) {
-        res.status(400).send(JSON.stringify(__error__));
+        console.error(__executionErrors__);
+        res.status(500).send(JSON.stringify(__executionErrors__));
     }
 };
