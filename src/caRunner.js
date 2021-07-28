@@ -176,9 +176,7 @@ module.exports = (code, context, helpers, fulfill, token) => {
             get: k => k ? resultState.user[k.toString()] : null
         };
 
-        const rpSecured = function (options) {
-            throw new Error('not integrated yet')
-        };
+        const rpSecured = rp;
 
         const promiseRetry = (func, ms = 100, maxRetries = 2, lastError) => new Promise((resolve, reject) => {
             if (maxRetries === 0)
