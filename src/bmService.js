@@ -54,3 +54,11 @@ exports.getCustomerContext = async (token, customerId = 'rnd') => {
   return await https(`${baseUrl}/api/v1.0/customer/${customerId}/context`, { headers });
 }
 
+
+exports.publishCa = async (token, caId) => {
+  const headers = {
+    'Accept': 'application/json',
+    'access-token': token,
+  }
+  return await https(`${baseUrl}/api/v1.0/clientAction/${caId}/publish`, { headers, method: 'POST' });
+}

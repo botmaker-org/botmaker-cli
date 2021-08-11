@@ -7,6 +7,7 @@ const run = require('./run');
 const importWorkspace = require('./importWorkspace');
 const setCustomer = require('./setCustomer');
 const getStatus = require('./getStatus');
+const publish = require('./publish');
 
 const main = async (args) => {
   const pwd = process.cwd();
@@ -70,6 +71,9 @@ const main = async (args) => {
     ).command(
       ['push [caName]'],
       'Push changes in client action'
+    ).command(
+      ['publish <caName>'],
+      'Publish changes in client action'
     )
     .demandCommand()
     .help('h')
@@ -116,6 +120,10 @@ const main = async (args) => {
     case "push":
       const { caName: caName4 } = arrgs;
       await push(pwd, caName4);
+      break;
+    case "publish":
+      const { caName: caName5 } = arrgs;
+      await publish(pwd, caName5);
       break;
     default:
       console.error(`bmc: '${arrgs._[0]}' is not a bmc command. See 'bmc -h'`)
