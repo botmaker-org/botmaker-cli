@@ -334,6 +334,340 @@ module.exports = (code, context, helpers, fulfill, token) => {
 
             carouselBuilder: () => __itemsBuilder__(),
 
+            appleBusinesChatCustomInteractiveMessage: (nextIntentName) => {
+                return {
+                    message: {
+                        ABC_IMAGES: [],
+                        ABC_NEXT_INTENT_NAME: {nextIntentName},
+                        ABC_RECEIVED_MSG: {},
+                        ABC_CUSTOM: {}
+                    },
+
+                    // images should be 840x630 pixels at 72dpi
+                    // When style is icon, the expected @3x image size is 40 x 40 points (120 x 120 pixels).
+                    // When style is small, the expected @3x image size is 60 x 60 points (180 x 180 pixels).
+                    // When style is large, the expected @3x image size is 263 x 150 points (789 x 450 pixels).
+                    addImageReferenceURL: function (url = 'https://placeimg.com/840/630/animals') {
+                        this.message.ABC_IMAGES = this.message.ABC_IMAGES.concat(url);
+                        return this;
+                    },
+
+                    setReceivedMessage: function (imageRefIndex = 0, title = 'default title') {
+                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title};
+                        return this;
+                    },
+
+                    // https://developer.apple.com/documentation/businesschatapi/messages_sent/interactive_messages/custom_interactive_messages/sending_a_custom_interactive_message
+                    setCustom: function (bid ,
+                                         appId ,
+                                         appName ,
+                                         URL ) {
+
+                        this.message.ABC_CUSTOM = {bid, appId, appName, URL};
+                        return this;
+                    },
+
+                    send: function () {
+                        resultState.say.push({
+                            MESSAGE: " ",
+                            ITEMS: [this.message]
+                        });
+                    }
+                };
+            },
+
+            appleBusinesChatAuthenticate: (nextIntentName, problemsIntentName) => {
+                return {
+                    message: {
+                        ABC_IMAGES: [],
+                        ABC_RECEIVED_MSG: {},
+                        ABC_NEXT_INTENT_NAME: {nextIntentName},
+                        ABC_REPLY_MSG: {},
+                        ABC_OAUTH2: {problemsIntentName}
+                    },
+
+                    // images should be 840x630 pixels at 72dpi
+                    // When style is icon, the expected @3x image size is 40 x 40 points (120 x 120 pixels).
+                    // When style is small, the expected @3x image size is 60 x 60 points (180 x 180 pixels).
+                    // When style is large, the expected @3x image size is 263 x 150 points (789 x 450 pixels).
+                    addImageReferenceURL: function (url = 'https://placeimg.com/840/630/animals') {
+                        this.message.ABC_IMAGES = this.message.ABC_IMAGES.concat(url);
+                        return this;
+                    },
+
+                    setReceivedMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
+                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title, style, subTitle};
+                        return this;
+                    },
+
+                    setReplyMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
+                        this.message.ABC_REPLY_MSG = {imageRefIndex, title, style, subTitle};
+                        return this;
+                    },
+
+                    setOAuth2: function (clientSecret, scopes, responseType) {
+                        this.message.ABC_OAUTH2 = {...this.message.ABC_OAUTH2, clientSecret, scopes, responseType};
+                        return this;
+                    },
+
+                    send: function () {
+                        resultState.say.push({
+                            MESSAGE: " ",
+                            ITEMS: [this.message]
+                        });
+                    }
+                };
+            },
+
+            appleBusinesChatApplePay: (nextIntentName, problemsIntentName) => {
+                return {
+                    message: {
+                        ABC_IMAGES: [],
+                        ABC_RECEIVED_MSG: {},
+                        ABC_NEXT_INTENT_NAME: {nextIntentName, problemsIntentName},
+                        ABC_REPLY_MSG: {},
+                        ABC_PAY_ENDPOINTS: {},
+                        ABC_PAY_PAYMENT: {items: []}
+                    },
+
+                    // images should be 840x630 pixels at 72dpi
+                    // When style is icon, the expected @3x image size is 40 x 40 points (120 x 120 pixels).
+                    // When style is small, the expected @3x image size is 60 x 60 points (180 x 180 pixels).
+                    // When style is large, the expected @3x image size is 263 x 150 points (789 x 450 pixels).
+                    addImageReferenceURL: function (url = 'https://placeimg.com/840/630/animals') {
+                        this.message.ABC_IMAGES = this.message.ABC_IMAGES.concat(url);
+                        return this;
+                    },
+
+                    setReceivedMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
+                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title, style, subTitle};
+                        return this;
+                    },
+
+                    setReplyMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
+                        this.message.ABC_REPLY_MSG = {imageRefIndex, title, style, subTitle};
+                        return this;
+                    },
+
+                    setEndpoints: function (paymentGatewayUrl, fallbackUrl = null, orderTrackingUrl = null, paymentMethodUpdateUrl = null, shippingContactUpdateUrl = null,
+                                            shippingMethodUpdateUrl = null) {
+                        this.message.ABC_PAY_ENDPOINTS = {paymentGatewayUrl, fallbackUrl, orderTrackingUrl, paymentMethodUpdateUrl, shippingContactUpdateUrl, shippingMethodUpdateUrl};
+                        return this;
+                    },
+
+                    // https://developer.apple.com/documentation/businesschatapi/applepaypaymentrequest
+                    // https://developer.apple.com/documentation/apple_pay_on_the_web/applepayrequest/2951831-supportednetworks
+                    setPayment: function (merchantIdentifier, merchantDisplayName, itemMerchantCapabilities, merchantPem, merchantPublicKey, paymentProcessorPrivateKey, supportedNetworks, countryCode, currencyCode) {
+                        this.message.ABC_PAY_PAYMENT = {
+                            ...this.message.ABC_PAY_PAYMENT,
+                            merchantIdentifier,
+                            merchantDisplayName,
+                            itemMerchantCapabilities,
+                            merchantPem,
+                            merchantPublicKey,
+                            paymentProcessorPrivateKey,
+                            supportedNetworks,
+                            countryCode,
+                            currencyCode
+                        };
+                        return this;
+                    },
+
+                    addLineItem: function (amount, label) {
+                        const itm = {amount, label};
+                        this.message.ABC_PAY_PAYMENT = {...this.message.ABC_PAY_PAYMENT, items: this.message.ABC_PAY_PAYMENT.items.concat(itm)};
+
+                        return this;
+                    },
+
+                    send: function () {
+                        resultState.say.push({
+                            MESSAGE: " ",
+                            ITEMS: [this.message]
+                        });
+                    }
+                };
+            },
+
+            appleBusinesChatForms: (nextIntentName, showSummary = false, splashImageRefIndex = -1, splashHeader = null, splashText = null, splashButtonTitle = null) => {
+                return {
+                    message: {
+                        ABC_IMAGES: [],
+                        ABC_RECEIVED_MSG: {},
+                        ABC_NEXT_INTENT_NAME: {nextIntentName},
+                        ABC_REPLY_MSG: {},
+                        ABC_FORMS: {showSummary, splashImageRefIndex, splashHeader, splashText, splashButtonTitle, pages: []}
+                    },
+
+                    // images should be 840x630 pixels at 72dpi
+                    // When style is icon, the expected @3x image size is 40 x 40 points (120 x 120 pixels).
+                    // When style is small, the expected @3x image size is 60 x 60 points (180 x 180 pixels).
+                    // When style is large, the expected @3x image size is 263 x 150 points (789 x 450 pixels).
+                    addImageReferenceURL: function (url = 'https://placeimg.com/840/630/animals') {
+                        this.message.ABC_IMAGES = this.message.ABC_IMAGES.concat(url);
+                        return this;
+                    },
+
+                    setReceivedMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
+                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title, style, subTitle};
+                        return this;
+                    },
+
+                    setReplyMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
+                        this.message.ABC_REPLY_MSG = {imageRefIndex, title, style, subTitle};
+                        return this;
+                    },
+
+                    addSelectPage: function (id, title, subtitle, nextPageId, isSubmitForm = false, multipleSelection = false) {
+                        const page = this.addPageImpl('select', id, title, subtitle, nextPageId, isSubmitForm, {multipleSelection});
+
+                        page.items = [];
+
+                        page.addItem = function (title = null, value = null, nextPageId = null, imageRefIndex = null) {
+                            page.items.push({title, value, nextPageId, imageRefIndex});
+                            return this;
+                        };
+
+                        return page;
+                    },
+
+                    addDatePickerPage: function (id, title, subtitle, nextPageId, isSubmitForm = false, dateFormat = 'MM/DD/YYYY', startDate, minimumDate, maximumDate, labelText) {
+                        return this.addPageImpl('datePicker', id, title, subtitle, nextPageId, isSubmitForm, {dateFormat, startDate, minimumDate, maximumDate, labelText});
+                    },
+
+                    addInputPage: function (id, title, subtitle, nextPageId, isSubmitForm = false, options = {}) {
+                        return this.addPageImpl('input', id, title, subtitle, nextPageId, isSubmitForm, {options});
+                    },
+
+                    addPageImpl: function (type, id, title, subtitle, nextPageId, isSubmitForm, others = {}) {
+                        const page = {...others, type, id, title, subtitle, nextPageId, isSubmitForm};
+
+                        this.message.ABC_FORMS = {...this.message.ABC_FORMS, pages: this.message.ABC_FORMS.pages.concat(page)};
+
+                        return page;
+                    },
+
+                    send: function () {
+                        resultState.say.push({
+                            MESSAGE: " ",
+                            ITEMS: [this.message]
+                        });
+                    }
+                };
+            },
+
+            appleBusinesChatTimePicker: (nextIntentName) => {
+                return {
+                    message: {
+                        ABC_IMAGES: [],
+                        ABC_NEXT_INTENT_NAME: {nextIntentName},
+                        ABC_RECEIVED_MSG: {},
+                        ABC_REPLY_MSG: {},
+                        ABC_EVENT: {},
+                        ABC_EVENT_LOCATION: {},
+                        ABC_EVENT_TIME_SLOTS: []
+                    },
+
+                    // images should be 840x630 pixels at 72dpi
+                    // When style is icon, the expected @3x image size is 40 x 40 points (120 x 120 pixels).
+                    // When style is small, the expected @3x image size is 60 x 60 points (180 x 180 pixels).
+                    // When style is large, the expected @3x image size is 263 x 150 points (789 x 450 pixels).
+                    addImageReferenceURL: function (url = 'https://placeimg.com/840/630/animals') {
+                        this.message.ABC_IMAGES = this.message.ABC_IMAGES.concat(url);
+                        return this;
+                    },
+
+                    setReceivedMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
+                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title, style, subTitle};
+                        return this;
+                    },
+
+                    setReplyMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
+                        this.message.ABC_REPLY_MSG = {imageRefIndex, title, style, subTitle};
+                        return this;
+                    },
+
+                    setEvent: function (imageRefIndex = 0, title = 'default title', bmVar) {
+                        this.message.ABC_EVENT = {imageRefIndex, title, bmVar};
+                        return this;
+                    },
+
+                    setLocation: function (title = 'default title', latitude, longitude, radius) {
+                        this.message.ABC_EVENT_LOCATION = {title, latitude, longitude, radius};
+                        return this;
+                    },
+
+                    addTimeItem: function (startTime = new Date(new Date().setDate(new Date().getDate() + 7)), duration = 600) {
+                        this.message.ABC_EVENT_TIME_SLOTS = this.message.ABC_EVENT_TIME_SLOTS.concat({
+                            startTime: startTime.toISOString(),
+                            duration
+                        });
+                        return this;
+                    },
+
+                    send: function () {
+                        resultState.say.push({
+                            MESSAGE: " ",
+                            ITEMS: [this.message]
+                        });
+                    }
+                };
+            },
+
+            appleBusinesChatListPicker: (nextIntentName) => {
+                return {
+                    message: {
+                        ABC_NEXT_INTENT_NAME: {nextIntentName},
+                        ABC_IMAGES: [],
+                        ABC_RECEIVED_MSG: {},
+                        ABC_REPLY_MSG: {},
+                        ABC_SECTIONS: []
+                    },
+
+                    // images should be 840x630 pixels at 72dpi
+                    // When style is icon, the expected @3x image size is 40 x 40 points (120 x 120 pixels).
+                    // When style is small, the expected @3x image size is 60 x 60 points (180 x 180 pixels).
+                    // When style is large, the expected @3x image size is 263 x 150 points (789 x 450 pixels).
+                    addImageReferenceURL: function (url = 'https://placeimg.com/840/630/animals') {
+                        this.message.ABC_IMAGES = this.message.ABC_IMAGES.concat(url);
+                        return this;
+                    },
+
+                    setReceivedMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
+                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title, style, subTitle};
+                        return this;
+                    },
+
+                    setReplyMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
+                        this.message.ABC_REPLY_MSG = {imageRefIndex, title, style, subTitle};
+                        return this;
+                    },
+
+                    addSection: function (title = 'section title', multipleSelection = false, bmVar) {
+                        const sec = {
+                            title,
+                            bmVar,
+                            multipleSelection,
+                            items: [],
+                            addItem: function (itemId, title = 'default item title', imageRefIndex = null, style = null, subTitle = null) {
+                                this.items = this.items.concat({itemId, title, imageRefIndex, style, subTitle});
+                                return this;
+                            }
+                        };
+
+                        this.message.ABC_SECTIONS = this.message.ABC_SECTIONS.concat(sec);
+                        return sec;
+                    },
+
+                    send: function () {
+                        resultState.say.push({
+                            MESSAGE: " ",
+                            ITEMS: [{...this.message, ABC_SECTIONS: this.message.ABC_SECTIONS.map(m => ({title: m.title, multipleSelection: m.multipleSelection, bmVar: m.bmVar, items: m.items}))}]
+                        });
+                    }
+                };
+            },
+
             listBuilder: () => {
                 let builder = __itemsBuilder__();
 

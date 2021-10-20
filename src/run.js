@@ -77,8 +77,6 @@ const runEndpointCa = async (wpPath, token, cas, ca, port) => {
   });
 };
 
-
-
 const runUserCa = async (wpPath, token, cas, ca, vars, params, volatile) => {
   const { code, helpers } = await getCodeAnHelpers(wpPath, cas, ca)
   const contextJson = await readFile(path.join(wpPath, "context.json"), "utf8");
