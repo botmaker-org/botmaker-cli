@@ -1,3 +1,4 @@
+const vm = require('vm');
 const rp = require('request-promise');
 const fs = require('fs');
 const lodash = require('lodash');
@@ -16,21 +17,67 @@ const awsSdk = require('aws-sdk');
 const awsApiClient = require('aws-api-gateway-client').default;
 const amazonCognito = require('amazon-cognito-identity-js');
 
+const cloneGlobal = () => Object.defineProperties(
+    {...global},
+    Object.getOwnPropertyDescriptors(global)
+)
+
 const ___runMain = (
-    {   
-        __require_helper,
-        req,
-        res,
-        bmconsole,
-    },
-    ___
+    bmContext,
+    code,
+    filename,
+    helpers
 ) => {
-    const request = req;
-    const response = res;
-    eval(___);
+    const context = Object.assign(
+        cloneGlobal(),
+        {
+            ...bmContext,
+            request: bmContext.req,
+            response: bmContext.res,
+            rp,
+            fs,
+            lodash,
+            _,
+            moment,
+            csv,
+            md5,
+            xml2js,
+            secureRandom,
+            turf,
+            turfHelpers,
+            jwt,
+            bluebird,
+            google,
+            awsSdk,
+            awsApiClient,
+            amazonCognito,
+            require,
+        },
+    );
+
+    const mainContext = Object.assign(
+        {},
+        context,
+        {
+            require: (packageName) => {
+                if (packageName in helpers) {
+                    vm.createContext(context);
+                    return vm.runInNewContext(
+                        helpers[packageName].code,
+                        context,
+                        { filename: helpers[packageName].source }
+                    )
+                }
+                return require(packageName)
+            },
+        },
+    );
+
+    vm.createContext(mainContext);
+    vm.runInNewContext(code, mainContext, { filename })
 }
 
-module.exports = (req, res, token, code, helpers ) => {
+module.exports = (req, res, token, code, helpers, filePath) => {
     const chalk = require('chalk');
     const __redisLib__ = require('redis');
     bluebird.promisifyAll(__redisLib__.RedisClient.prototype);
@@ -85,17 +132,15 @@ module.exports = (req, res, token, code, helpers ) => {
         };
 
         req.connectRedis = connectRedis;
-
-        const g4nmksd5m__helpers = helpers.map((src) => eval(src));
-
-        const __require_helper = (indx) => g4nmksd5m__helpers[indx];
-
-        ___runMain({
-            __require_helper,
-            req,
-            res,
-            bmconsole,
-        },code);
+        ___runMain(
+            {
+                req,
+                res,
+                bmconsole,
+            },
+            code,
+            filePath,
+            helpers);
     } catch (__executionErrors__) {
         console.error(__executionErrors__);
         res.status(500).send(JSON.stringify(__executionErrors__));

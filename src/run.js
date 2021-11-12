@@ -1,4 +1,6 @@
+const readline = require('readline');
 const fs = require('fs');
+const rp = require('request-promise');
 const util = require('util');
 const caRunner = require('./caRunner');
 const path = require('path');
@@ -26,7 +28,7 @@ const require_core_action_pattern = /require\((?:(?:'([a-zA-Z0-9_-]*))'|(?:"([a-
 
 const getCodeAnHelpers = async (wpPath, cas, ca) => {
   const filePath = path.join(wpPath, 'src', ca.filename);
-  const helpers = [];
+  const helpers = {};
 
   let code = await readFile(filePath, "utf8");
   let match;
@@ -39,46 +41,74 @@ const getCodeAnHelpers = async (wpPath, cas, ca) => {
     if (await exists(posibleUtils)) {
       let helper = await readFile(posibleUtils, "utf8");
       const parsedHelper = "({" + helper.replace(/function /, "").replace(/function /g, ",") + "})\n//# sourceURL=" + posibleUtils;
-      code = code.replace(match[0], `__require_helper(${helpers.length})`)
-      helpers.push(parsedHelper);
+      helpers[req] = {code: parsedHelper, source: posibleUtils};
     }
   }
-
-  code = code + "\n//# sourceURL=" + filePath
-  return { code, helpers };
+  return { code, helpers, filePath};
 }
 
 const runEndpointCa = async (wpPath, token, cas, ca, port) => {
+
+
   const app = express();
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
   // app.use(express.raw());
   // app.use(express.text());
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  
 
   app.use((req, res, next) => {
     const start = (new Date()).getTime();
-    console.log(chalk.green(` Req [${req.method}] ${req.path}`));
+    console.log(chalk.yellow(` Req [${req.method}] ${req.path}`));
     res.on('finish', () => {
       const end = (new Date()).getTime();
-      console.log(chalk.yellow(` Res [${res.statusCode}] on ${end - start}ms`));
+      if(res.statusCode >= 200 && res.statusCode < 300) {
+        console.log(chalk.green(` Res [${res.statusCode}] on ${end - start}ms`));  
+      } else {
+        console.log(chalk.red(` Res [${res.statusCode}] on ${end - start}ms`));
+      }
     });
     next();
   });
 
 
+  const runTest = () => new Promise( r => rl.question("Press ENTER to run test", r ) )
+    .then( async () => {
+      console.log('Calling service...')
+      try{
+        const ret = await rp({uri:`http://localhost:${port}`});
+        console.log(chalk.green(ret));  
+      } catch( err ) {
+        console.error(chalk.red(err.message));
+      }
+      return runTest();
+    });
+
+
   app.use(async (req, res) => {
-    const { code, helpers } = await getCodeAnHelpers(wpPath, cas, ca)
-    caEndpointRunner(req, res, token, code, helpers);
+    const { code, helpers, filePath} = await getCodeAnHelpers(wpPath, cas, ca)
+    caEndpointRunner(req, res, token, code, helpers, filePath);
   });
 
   app.listen(port, () => {
     console.log(chalk.green(`Listening in http://localhost:${port}`));
     console.log('Press Ctrl + C to stop the server.');
+    runTest();
   });
+
+  rl.on("close", function() {
+    console.log("\nBYE BYE !!!");
+    process.exit(0);
+  });
+  
 };
 
 const runUserCa = async (wpPath, token, cas, ca, vars, params, volatile) => {
-  const { code, helpers } = await getCodeAnHelpers(wpPath, cas, ca)
+  const { code, helpers, filePath} = await getCodeAnHelpers(wpPath, cas, ca)
   const contextJson = await readFile(path.join(wpPath, "context.json"), "utf8");
   const context = JSON.parse(contextJson);
   const commandVars = doubleArrayToObject(vars);
@@ -88,7 +118,7 @@ const runUserCa = async (wpPath, token, cas, ca, vars, params, volatile) => {
   const startTime = new Date().getTime();
   const result = await new Promise((fulfill, reject) => {
     try {
-      caRunner(code, context, helpers, fulfill, token);
+      caRunner(code, context, helpers, fulfill, token, filePath);
     } catch (err) {
       reject(err);
     }

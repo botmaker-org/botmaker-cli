@@ -1,9 +1,9 @@
+const vm = require('vm');
 const rp = require('request-promise');
 const fs = require('fs');
 const lodash = require('lodash');
 const _ = lodash;
 const moment = require('moment');
-
 const csv = require("fast-csv");
 const md5 = require('md5');
 const sha256 = require('js-sha256');
@@ -18,22 +18,60 @@ const awsSdk = require('aws-sdk');
 const awsApiClient = require('aws-api-gateway-client').default;
 const amazonCognito = require('amazon-cognito-identity-js');
 
+const cloneGlobal = () => Object.defineProperties(
+    {...global},
+    Object.getOwnPropertyDescriptors(global)
+)
+
 const ___runMain = (
-    {
-        __require_helper,
-        result,
-        bmconsole,
-        context,
-        promiseRetry,
-        connectRedis,
-        user, 
-    },
-    ___
+    bmContext,
+    code,
+    filename,
+    helpers
 ) => {
-    eval(___);
+    const context = Object.assign(
+        cloneGlobal(),
+        {
+            ...bmContext,
+            rp,
+            fs,
+            lodash,
+            _,
+            moment,
+            csv,
+            md5,
+            sha256,
+            xml2js,
+            secureRandom,
+            turf,
+            turfHelpers,
+            jwt,
+            bluebird,
+            google,
+            awsSdk,
+            awsApiClient,
+            amazonCognito,
+            require,
+        },
+    );
+
+    const mainContext = Object.assign(
+        context,
+        {
+            require: (packageName) => {
+                if (packageName in helpers) {
+                    vm.createContext(context);
+                    return vm.runInNewContext(helpers[packageName].code, context, { filename: helpers[packageName].source })
+                }
+                return require(packageName)
+            },
+        },
+    );
+    vm.createContext(mainContext);
+    vm.runInNewContext(code, mainContext, { filename })
 }
 
-module.exports = (code, context, helpers, fulfill, token) => {
+module.exports = (code, context, helpers, fulfill, token, filename) => {
     const chalk = require('chalk');
     const __redisLib__ = require('redis');
     bluebird.promisifyAll(__redisLib__.RedisClient.prototype);
@@ -61,7 +99,7 @@ module.exports = (code, context, helpers, fulfill, token) => {
     let alreadyDone = false;
 
     const resultState = {
-        user: {...context.userData.variables} || {},
+        user: { ...context.userData.variables } || {},
         gotoRuleName: null,
         say: []
     };
@@ -110,18 +148,7 @@ module.exports = (code, context, helpers, fulfill, token) => {
     });
 
     try {
-        let consoleColor = { log: chalk.green, warn: chalk.yellow, error: chalk.red }
-        const bmconsole = {};
-        ["log", "warn", "error"].forEach(
-            method => bmconsole[method] = function (...p) {
-                const { caller, line } = __parceStackTrace(new Error()).stack[1]
-                console[method](
-                    consoleColor[method](
-                        chalk.bold(`${caller === 'eval' ? 'main' : caller}:${line}~>`), ...p
-                    )
-                )
-            });
-
+        const bmconsole = console
         const connectRedis = () => {
             const redis = __redisLib__.createClient(6379, 'redis.botmaker.com', {
                 password: token,
@@ -338,7 +365,7 @@ module.exports = (code, context, helpers, fulfill, token) => {
                 return {
                     message: {
                         ABC_IMAGES: [],
-                        ABC_NEXT_INTENT_NAME: {nextIntentName},
+                        ABC_NEXT_INTENT_NAME: { nextIntentName },
                         ABC_RECEIVED_MSG: {},
                         ABC_CUSTOM: {}
                     },
@@ -353,17 +380,17 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     },
 
                     setReceivedMessage: function (imageRefIndex = 0, title = 'default title') {
-                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title};
+                        this.message.ABC_RECEIVED_MSG = { imageRefIndex, title };
                         return this;
                     },
 
                     // https://developer.apple.com/documentation/businesschatapi/messages_sent/interactive_messages/custom_interactive_messages/sending_a_custom_interactive_message
-                    setCustom: function (bid ,
-                                         appId ,
-                                         appName ,
-                                         URL ) {
+                    setCustom: function (bid,
+                        appId,
+                        appName,
+                        URL) {
 
-                        this.message.ABC_CUSTOM = {bid, appId, appName, URL};
+                        this.message.ABC_CUSTOM = { bid, appId, appName, URL };
                         return this;
                     },
 
@@ -381,9 +408,9 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     message: {
                         ABC_IMAGES: [],
                         ABC_RECEIVED_MSG: {},
-                        ABC_NEXT_INTENT_NAME: {nextIntentName},
+                        ABC_NEXT_INTENT_NAME: { nextIntentName },
                         ABC_REPLY_MSG: {},
-                        ABC_OAUTH2: {problemsIntentName}
+                        ABC_OAUTH2: { problemsIntentName }
                     },
 
                     // images should be 840x630 pixels at 72dpi
@@ -396,17 +423,17 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     },
 
                     setReceivedMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
-                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title, style, subTitle};
+                        this.message.ABC_RECEIVED_MSG = { imageRefIndex, title, style, subTitle };
                         return this;
                     },
 
                     setReplyMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
-                        this.message.ABC_REPLY_MSG = {imageRefIndex, title, style, subTitle};
+                        this.message.ABC_REPLY_MSG = { imageRefIndex, title, style, subTitle };
                         return this;
                     },
 
                     setOAuth2: function (clientSecret, scopes, responseType) {
-                        this.message.ABC_OAUTH2 = {...this.message.ABC_OAUTH2, clientSecret, scopes, responseType};
+                        this.message.ABC_OAUTH2 = { ...this.message.ABC_OAUTH2, clientSecret, scopes, responseType };
                         return this;
                     },
 
@@ -424,10 +451,10 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     message: {
                         ABC_IMAGES: [],
                         ABC_RECEIVED_MSG: {},
-                        ABC_NEXT_INTENT_NAME: {nextIntentName, problemsIntentName},
+                        ABC_NEXT_INTENT_NAME: { nextIntentName, problemsIntentName },
                         ABC_REPLY_MSG: {},
                         ABC_PAY_ENDPOINTS: {},
-                        ABC_PAY_PAYMENT: {items: []}
+                        ABC_PAY_PAYMENT: { items: [] }
                     },
 
                     // images should be 840x630 pixels at 72dpi
@@ -440,18 +467,18 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     },
 
                     setReceivedMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
-                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title, style, subTitle};
+                        this.message.ABC_RECEIVED_MSG = { imageRefIndex, title, style, subTitle };
                         return this;
                     },
 
                     setReplyMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
-                        this.message.ABC_REPLY_MSG = {imageRefIndex, title, style, subTitle};
+                        this.message.ABC_REPLY_MSG = { imageRefIndex, title, style, subTitle };
                         return this;
                     },
 
                     setEndpoints: function (paymentGatewayUrl, fallbackUrl = null, orderTrackingUrl = null, paymentMethodUpdateUrl = null, shippingContactUpdateUrl = null,
-                                            shippingMethodUpdateUrl = null) {
-                        this.message.ABC_PAY_ENDPOINTS = {paymentGatewayUrl, fallbackUrl, orderTrackingUrl, paymentMethodUpdateUrl, shippingContactUpdateUrl, shippingMethodUpdateUrl};
+                        shippingMethodUpdateUrl = null) {
+                        this.message.ABC_PAY_ENDPOINTS = { paymentGatewayUrl, fallbackUrl, orderTrackingUrl, paymentMethodUpdateUrl, shippingContactUpdateUrl, shippingMethodUpdateUrl };
                         return this;
                     },
 
@@ -474,8 +501,8 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     },
 
                     addLineItem: function (amount, label) {
-                        const itm = {amount, label};
-                        this.message.ABC_PAY_PAYMENT = {...this.message.ABC_PAY_PAYMENT, items: this.message.ABC_PAY_PAYMENT.items.concat(itm)};
+                        const itm = { amount, label };
+                        this.message.ABC_PAY_PAYMENT = { ...this.message.ABC_PAY_PAYMENT, items: this.message.ABC_PAY_PAYMENT.items.concat(itm) };
 
                         return this;
                     },
@@ -494,9 +521,9 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     message: {
                         ABC_IMAGES: [],
                         ABC_RECEIVED_MSG: {},
-                        ABC_NEXT_INTENT_NAME: {nextIntentName},
+                        ABC_NEXT_INTENT_NAME: { nextIntentName },
                         ABC_REPLY_MSG: {},
-                        ABC_FORMS: {showSummary, splashImageRefIndex, splashHeader, splashText, splashButtonTitle, pages: []}
+                        ABC_FORMS: { showSummary, splashImageRefIndex, splashHeader, splashText, splashButtonTitle, pages: [] }
                     },
 
                     // images should be 840x630 pixels at 72dpi
@@ -509,22 +536,22 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     },
 
                     setReceivedMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
-                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title, style, subTitle};
+                        this.message.ABC_RECEIVED_MSG = { imageRefIndex, title, style, subTitle };
                         return this;
                     },
 
                     setReplyMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
-                        this.message.ABC_REPLY_MSG = {imageRefIndex, title, style, subTitle};
+                        this.message.ABC_REPLY_MSG = { imageRefIndex, title, style, subTitle };
                         return this;
                     },
 
                     addSelectPage: function (id, title, subtitle, nextPageId, isSubmitForm = false, multipleSelection = false) {
-                        const page = this.addPageImpl('select', id, title, subtitle, nextPageId, isSubmitForm, {multipleSelection});
+                        const page = this.addPageImpl('select', id, title, subtitle, nextPageId, isSubmitForm, { multipleSelection });
 
                         page.items = [];
 
                         page.addItem = function (title = null, value = null, nextPageId = null, imageRefIndex = null) {
-                            page.items.push({title, value, nextPageId, imageRefIndex});
+                            page.items.push({ title, value, nextPageId, imageRefIndex });
                             return this;
                         };
 
@@ -532,17 +559,17 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     },
 
                     addDatePickerPage: function (id, title, subtitle, nextPageId, isSubmitForm = false, dateFormat = 'MM/DD/YYYY', startDate, minimumDate, maximumDate, labelText) {
-                        return this.addPageImpl('datePicker', id, title, subtitle, nextPageId, isSubmitForm, {dateFormat, startDate, minimumDate, maximumDate, labelText});
+                        return this.addPageImpl('datePicker', id, title, subtitle, nextPageId, isSubmitForm, { dateFormat, startDate, minimumDate, maximumDate, labelText });
                     },
 
                     addInputPage: function (id, title, subtitle, nextPageId, isSubmitForm = false, options = {}) {
-                        return this.addPageImpl('input', id, title, subtitle, nextPageId, isSubmitForm, {options});
+                        return this.addPageImpl('input', id, title, subtitle, nextPageId, isSubmitForm, { options });
                     },
 
                     addPageImpl: function (type, id, title, subtitle, nextPageId, isSubmitForm, others = {}) {
-                        const page = {...others, type, id, title, subtitle, nextPageId, isSubmitForm};
+                        const page = { ...others, type, id, title, subtitle, nextPageId, isSubmitForm };
 
-                        this.message.ABC_FORMS = {...this.message.ABC_FORMS, pages: this.message.ABC_FORMS.pages.concat(page)};
+                        this.message.ABC_FORMS = { ...this.message.ABC_FORMS, pages: this.message.ABC_FORMS.pages.concat(page) };
 
                         return page;
                     },
@@ -560,7 +587,7 @@ module.exports = (code, context, helpers, fulfill, token) => {
                 return {
                     message: {
                         ABC_IMAGES: [],
-                        ABC_NEXT_INTENT_NAME: {nextIntentName},
+                        ABC_NEXT_INTENT_NAME: { nextIntentName },
                         ABC_RECEIVED_MSG: {},
                         ABC_REPLY_MSG: {},
                         ABC_EVENT: {},
@@ -578,22 +605,22 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     },
 
                     setReceivedMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
-                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title, style, subTitle};
+                        this.message.ABC_RECEIVED_MSG = { imageRefIndex, title, style, subTitle };
                         return this;
                     },
 
                     setReplyMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
-                        this.message.ABC_REPLY_MSG = {imageRefIndex, title, style, subTitle};
+                        this.message.ABC_REPLY_MSG = { imageRefIndex, title, style, subTitle };
                         return this;
                     },
 
                     setEvent: function (imageRefIndex = 0, title = 'default title', bmVar) {
-                        this.message.ABC_EVENT = {imageRefIndex, title, bmVar};
+                        this.message.ABC_EVENT = { imageRefIndex, title, bmVar };
                         return this;
                     },
 
                     setLocation: function (title = 'default title', latitude, longitude, radius) {
-                        this.message.ABC_EVENT_LOCATION = {title, latitude, longitude, radius};
+                        this.message.ABC_EVENT_LOCATION = { title, latitude, longitude, radius };
                         return this;
                     },
 
@@ -617,7 +644,7 @@ module.exports = (code, context, helpers, fulfill, token) => {
             appleBusinesChatListPicker: (nextIntentName) => {
                 return {
                     message: {
-                        ABC_NEXT_INTENT_NAME: {nextIntentName},
+                        ABC_NEXT_INTENT_NAME: { nextIntentName },
                         ABC_IMAGES: [],
                         ABC_RECEIVED_MSG: {},
                         ABC_REPLY_MSG: {},
@@ -634,12 +661,12 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     },
 
                     setReceivedMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
-                        this.message.ABC_RECEIVED_MSG = {imageRefIndex, title, style, subTitle};
+                        this.message.ABC_RECEIVED_MSG = { imageRefIndex, title, style, subTitle };
                         return this;
                     },
 
                     setReplyMessage: function (imageRefIndex = 0, title = 'default title', style = 'icon', subTitle = null) {
-                        this.message.ABC_REPLY_MSG = {imageRefIndex, title, style, subTitle};
+                        this.message.ABC_REPLY_MSG = { imageRefIndex, title, style, subTitle };
                         return this;
                     },
 
@@ -650,7 +677,7 @@ module.exports = (code, context, helpers, fulfill, token) => {
                             multipleSelection,
                             items: [],
                             addItem: function (itemId, title = 'default item title', imageRefIndex = null, style = null, subTitle = null) {
-                                this.items = this.items.concat({itemId, title, imageRefIndex, style, subTitle});
+                                this.items = this.items.concat({ itemId, title, imageRefIndex, style, subTitle });
                                 return this;
                             }
                         };
@@ -662,7 +689,7 @@ module.exports = (code, context, helpers, fulfill, token) => {
                     send: function () {
                         resultState.say.push({
                             MESSAGE: " ",
-                            ITEMS: [{...this.message, ABC_SECTIONS: this.message.ABC_SECTIONS.map(m => ({title: m.title, multipleSelection: m.multipleSelection, bmVar: m.bmVar, items: m.items}))}]
+                            ITEMS: [{ ...this.message, ABC_SECTIONS: this.message.ABC_SECTIONS.map(m => ({ title: m.title, multipleSelection: m.multipleSelection, bmVar: m.bmVar, items: m.items })) }]
                         });
                     }
                 };
@@ -706,25 +733,33 @@ module.exports = (code, context, helpers, fulfill, token) => {
             });
         }, 90000);
 
-        const g4nmksd5m__helpers = helpers.map((src) => eval(src));
-
-        const __require_helper = (indx) => g4nmksd5m__helpers[indx];
-
         ___runMain({
-            __require_helper,
             result,
             bmconsole,
             context,
             promiseRetry,
             user,
             connectRedis,
-        },code);
+        },
+            code,
+            filename,
+            helpers,
+        );
 
     } catch (__executionErrors__) {
-        result_done({
-            error: "exception",
-            message: __executionErrors__.message,
-            stack: __executionErrors__.stack
-        });
+
+        if (__executionErrors__ instanceof SyntaxError) {
+            result_done({
+                error: "exception",
+                message: __executionErrors__.message,
+                stack: __executionErrors__.stack
+            });
+        } else {
+            result_done({
+                error: "exception",
+                message: __executionErrors__.message,
+                stack: __executionErrors__.stack
+            });
+        }
     }
 };

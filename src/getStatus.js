@@ -141,6 +141,8 @@ const getCaPath = async (wpPath, caName) => {
     caName,
     caName && path.join(wpPath, caName),
     caName && path.join(wpPath, 'src', caName),
+    caName && path.join(wpPath, caName + ".js"),
+    caName && path.join(wpPath, 'src', caName + ".js"),
   ];
 
   for (const path of posiblePaths) {
@@ -152,20 +154,28 @@ const getCaPath = async (wpPath, caName) => {
   return null;
 }
 
-const getCaByNameOrPath = (wpPath, cas, caName) => {
+const getCaByNameOrPath = async (wpPath, cas, caName) => {
   if (!caName) return
   if (path.isAbsolute(caName)) {
     return cas.find(ca => path.relative(path.join(wpPath, 'src', ca.filename), caName) === '');
   }
-  const byPath = cas.find(ca => path.relative(path.join(wpPath, 'src', ca.filename), path.join(wpPath, 'src', caName)) === '');
-  if (byPath) {
-    return byPath;
-  }
+  
   const byName = cas.find(ca => ca.name === caName);
   if (byName) {
     return byName;
   }
-  const nonAdded = getCaPath(wpPath,caName);
+
+  const byPath = cas.find(ca => path.relative(path.join(wpPath, 'src', ca.filename), path.join(wpPath, 'src', caName)) === '');
+  if (byPath) {
+    return byPath;
+  }
+
+  const byFileName = cas.find(ca => ca.filename === caName || ca.filename === caName + ".js");
+  if (byFileName) {
+    return byFileName;
+  }
+
+  const nonAdded = await getCaPath(wpPath,caName);
   if(nonAdded){
     return {filename: path.basename(nonAdded)}
   }
@@ -259,7 +269,7 @@ const getChangesFromStatus = (status, changesTypes = posibleChanges) => {
 const getSingleStatusChanges = async (pwd, caName) => {
   const wpPath = await getWorkspacePath(pwd)
   const { token, cas } = await getBmc(wpPath);
-  const matchedCa = getCaByNameOrPath(wpPath, cas, caName);
+  const matchedCa = await getCaByNameOrPath(wpPath, cas, caName);
   if (!matchedCa){
     
   }
