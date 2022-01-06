@@ -1,6 +1,6 @@
 {
   "name": "@botmaker.org/botmaker-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "botmaker-console",
   "main": "index.js",
   "scripts": {

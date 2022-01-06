@@ -56,7 +56,6 @@ const ___runMain = (
     );
 
     const mainContext = Object.assign(
-        {},
         context,
         {
             require: (packageName) => {
@@ -74,7 +73,7 @@ const ___runMain = (
     );
 
     vm.createContext(mainContext);
-    vm.runInNewContext(code, mainContext, { filename })
+    vm.runInNewContext(code, mainContext, { filename , timeout: 90*60*1000 })
 }
 
 module.exports = (req, res, token, code, helpers, filePath) => {
@@ -106,7 +105,7 @@ module.exports = (req, res, token, code, helpers, filePath) => {
         const bmconsole = {};
         ["log", "warn", "error"].forEach(
             method => bmconsole[method] = function (...p) {
-                const { caller, line } = __parceStackTrace(new Error()).stack[1]
+                const { caller, line } = __parceStackTrace(new Error()).stack[1] || {}
                 console[method](
                     consoleColor[method](
                         chalk.bold(`${caller === 'eval' ? 'main' : caller}:${line}~>`), ...p
