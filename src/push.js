@@ -9,6 +9,14 @@ const { updateCas } = require("./bmService");
 const chalk = require("chalk");
 
 const {ChangeType} = getStatus;
+const maxLength = 100000;
+
+const checkClientActionLength = (text, caName) => {
+  if (text.length > maxLength) {
+    console.log(chalk.red(`The code action ${caName} is too big. The maximum size is 100000 characters.`));
+    throw new Error(`Error trying to push changes in ${caName}`);
+  }
+}
 
 const getPushChanges = (status, changes) => {
   const hasLocalChanges = changes.includes(getStatus.ChangeType.LOCAL_CHANGES);
@@ -47,6 +55,7 @@ const singlePush = async (pwd, caName) => {
     console.log(chalk.green('Nothing to push!. No local changes found.'))
     return;
   }
+  checkClientActionLength(pushChanges.unPublishedCode, caName);
   const { token, cas } = await getBmc(wpPath);
   await applyPush(token,[pushChanges]);
   const newCas = cas.map( ca =>
@@ -65,8 +74,9 @@ const completePush = async (pwd) => {
     if (hasIncomingChanges(changes)){
       throw new Error('There is incoming changes you must make an pull first.');
     }
-    const pushChanges = getPushChanges(status, changes);
+    const pushChanges = getPushChanges(status, changes);    
     if (pushChanges) {
+      checkClientActionLength(pushChanges.unPublishedCode, status.n);
       toPush.push(pushChanges);
     }
   }
