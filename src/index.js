@@ -78,7 +78,7 @@ const main = async (args) => {
     .demandCommand()
     .help('h')
     .alias('h', 'help')
-    .version("0.1.4")
+    .version("0.1.5")
     .epilog('copyright Botmaker 2022')
     .argv;
 
