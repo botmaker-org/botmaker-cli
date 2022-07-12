@@ -4,8 +4,9 @@ module.exports = ((url,urlOptions, data) => {
   return new Promise((resolve, reject) => {
     const req = https.request(url,urlOptions,
       (res) => {
+        res.setEncoding('utf8');
         let body = '';
-        res.on('data', (chunk) => (body += chunk.toString()));
+        res.on('data', (chunk) => (body += chunk));
         res.on('error', reject);
         res.on('end', () => {
           if (res.statusCode >= 200 && res.statusCode <= 299) {
