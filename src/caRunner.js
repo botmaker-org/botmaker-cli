@@ -740,6 +740,7 @@ module.exports = (code, context, helpers, fulfill, token, filename) => {
             promiseRetry,
             user,
             connectRedis,
+            rpSecured,
         },
             code,
             filename,
