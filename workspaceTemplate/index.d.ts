@@ -14,9 +14,6 @@ import turfHelpers from  '@turf/helpers';
 import jwt from  'jsonwebtoken';
 import bluebird from  'bluebird';
 import { google } from 'googleapis';
-import awsSdk from  'aws-sdk';
-import awsApiClient from  'aws-api-gateway-client';
-import amazonCognito from  'amazon-cognito-identity-js';
 import {Request,Response} from 'express';
 
 type BmOptionType = "url" | "location" | "element_share" | "phone_number" | "postback"
@@ -188,7 +185,4 @@ declare global {
   declare const jwt = jwt;
   declare const bluebird = bluebird;
   declare const google = google;
-  declare const awsSdk = awsSdk;
-  declare const awsApiClient = awsApiClient;
-  declare const amazonCognito = amazonCognito;
 }

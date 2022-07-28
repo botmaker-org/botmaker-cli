@@ -21,9 +21,6 @@
       "jsonwebtoken",
       "bluebird",
       "googleapis",
-      "aws-sdk",
-      "aws-api-gateway-client",
-      "amazon-cognito-identity-js",
       "express"
     ]
   },

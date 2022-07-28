@@ -14,9 +14,6 @@ const turfHelpers = require('@turf/helpers');
 const jwt = require('jsonwebtoken');
 const bluebird = require('bluebird');
 const { google } = require('googleapis');
-const awsSdk = require('aws-sdk');
-const awsApiClient = require('aws-api-gateway-client').default;
-const amazonCognito = require('amazon-cognito-identity-js');
 
 const cloneGlobal = () => Object.defineProperties(
     {...global},
@@ -48,9 +45,6 @@ const ___runMain = (
             jwt,
             bluebird,
             google,
-            awsSdk,
-            awsApiClient,
-            amazonCognito,
             require,
         },
     );
