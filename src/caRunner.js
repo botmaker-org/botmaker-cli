@@ -160,17 +160,16 @@ module.exports = (code, context, helpers, fulfill, token, filename) => {
             return redis;
         };
 
-        const entityLoader = (name, cb) => {
+        const entityLoader = (entityName, cb) => {
             rp({
-                uri: 'https://go.botmaker.com/rest/operator/clientActions/_int_GetBotEntity',
-                method: 'POST',
+                uri: `https://api.botmaker.com/v2.0/entities/${encodeURIComponent(entityName)}`,
+                method: 'GET',
                 headers: {
-                    'name': name,
-                    'auth': token,
+                    'access-token': token,
                 },
                 json: true
             })
-                .then(json => cb(json))
+                .then(json => cb(json.items))
                 .catch(error => cb(null, error));
         };
 
@@ -735,6 +734,7 @@ module.exports = (code, context, helpers, fulfill, token, filename) => {
             user,
             connectRedis,
             rpSecured,
+            entityLoader,
         },
             code,
             filename,
