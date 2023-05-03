@@ -1,6 +1,6 @@
 {
   "name": "@botmaker.org/botmaker-cli",
-  "version": "0.1.6",
+  "version": "0.1.8",
   "description": "botmaker-console",
   "main": "index.js",
   "scripts": {
@@ -31,7 +31,6 @@
     "secure-random": "^1.1.1",
     "xml2js": "^0.4.19",
     "xml2json": "^0.12.0",
-    "amazon-cognito-identity-js": "^3.0.14",
     "@types/request-promise": "^4.1.47",
     "chalk": "^4.1.0",
     "diff": "^5.0.0",
