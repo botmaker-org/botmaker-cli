@@ -8,6 +8,8 @@ const importWorkspace = require('./importWorkspace');
 const setCustomer = require('./setCustomer');
 const getStatus = require('./getStatus');
 const publish = require('./publish');
+const rename = require('./rename');
+const listCas = require('./listCas');
 
 const main = async (args) => {
   const pwd = process.cwd();
@@ -70,34 +72,27 @@ const main = async (args) => {
         })
     ).command(
       ['push [caName]'],
-      'Push changes in client action'
+      'Push changes in client action',
+      (yargs) => yargs
+        .option('b', {
+          alias: 'publish',
+          describe: 'Push and publish with a single command',
+        })
     ).command(
       ['publish <caName>'],
       'Publish changes in client action'
+    ).command(
+      ['rename <caName> <newName>'],
+      'Renames the given client action'
     )
     .demandCommand()
     .help('h')
     .alias('h', 'help')
-    .version("0.1.6")
+    .version("0.1.8")
     .epilog('copyright Botmaker 2022')
     .argv;
 
   switch (arrgs._[0]) {
-    case "run":
-    case "r":
-      const { source, v = [], p = [], volatile = false, endpoint, port } = arrgs;
-      await run(pwd, source, { vars: v, params: p, volatile, endpoint, port})
-      break;
-    case "import":
-    case "i":
-      const { apiToken } = arrgs;
-      await importWorkspace(pwd, apiToken)
-      break;
-    case "status":
-    case "s":
-      const { caName } = arrgs;
-      await getStatus(pwd, caName);
-      break;
     case "set-customer":
     case "c":
       const { customerId } = arrgs;
@@ -108,22 +103,45 @@ const main = async (args) => {
       const { caName: caName1, code, v: vsCode } = arrgs;
       await getDiff(pwd, caName1, code, vsCode);
       break;
-    case "pull":
-      const { caName: caName2 } = arrgs;
-      await pull(pwd, caName2);
+    case "import":
+    case "i":
+      const { apiToken } = arrgs;
+      await importWorkspace(pwd, apiToken)
+      break;
+    case "list":
+    case "ls":
+      await listCas(pwd)
       break;
     case "new":
     case "n":
       const { caName: caName3, v: vsCode1, e } = arrgs;
       await newCa(pwd, caName3, e ? "ENDPOINT" : "USER", vsCode1);
       break;
-    case "push":
-      const { caName: caName4 } = arrgs;
-      await push(pwd, caName4);
-      break;
     case "publish":
       const { caName: caName5 } = arrgs;
       await publish(pwd, caName5);
+      break;
+    case "pull":
+      const { caName: caName2 } = arrgs;
+      await pull(pwd, caName2);
+      break;
+    case "push":
+      const { caName: caName4, b} = arrgs;
+      await push(pwd, caName4, b ? "TRUE" : "FALSE");
+      break;
+    case "rename":
+      const { caName: caName6, newName} = arrgs;
+      await rename(pwd, caName6, newName);
+      break;
+    case "run":
+    case "r":
+      const { source, v = [], p = [], volatile = false, endpoint, port } = arrgs;
+      await run(pwd, source, { vars: v, params: p, volatile, endpoint, port})
+      break;
+    case "status":
+    case "s":
+      const { caName } = arrgs;
+      await getStatus(pwd, caName);
       break;
     default:
       console.error(`bmc: '${arrgs._[0]}' is not a bmc command. See 'bmc -h'`)
