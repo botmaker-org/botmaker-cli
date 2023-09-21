@@ -7,6 +7,7 @@ const { getBmc, saveBmc } = require('./bmcConfig');
 const getWorkspacePath = require('./getWorkspacePath');
 const { updateCas } = require("./bmService");
 const chalk = require("chalk");
+const publish = require('./publish');
 
 const {ChangeType} = getStatus;
 const maxLength = 100000;
@@ -97,11 +98,14 @@ const completePush = async (pwd) => {
   await saveBmc(wpPath,token,newCas);
 }
 
-const push = async (pwd, caName) => {
+const push = async (pwd, caName, forPublish) => {
   if (caName) {
     await singlePush(pwd, caName);
   } else {
     await completePush(pwd);
+  }
+  if(forPublish == "TRUE") {
+    await publish(pwd, caName);
   }
 };
 

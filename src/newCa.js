@@ -89,7 +89,6 @@ const newCa = async (pwd, caName, type, openVsCode = false) => {
   const status = await createFileAndStatus(wpPath, ca, openVsCode);
   const newCas = cas.concat(status);
   await saveBmc(wpPath,token,newCas);
-
 };
 
 module.exports = newCa;
