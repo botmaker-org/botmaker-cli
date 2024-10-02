@@ -192,5 +192,5 @@ declare global {
   declare const jwt = jwt;
   declare const bluebird = bluebird;
   declare const google = google;
-  declare const db = BmDb;
+  declare const db: BmDb;
 }
