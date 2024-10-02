@@ -173,6 +173,33 @@ module.exports = (code, context, helpers, fulfill, token, filename) => {
                 .catch(error => cb(null, error));
         };
 
+        const db = {
+            get: async k => {
+                const lkd22lakd2 = await fetch('https://us-west1-m-infra.cloudfunctions.net/code_action_pair/get', {headers: {o:'api',k, t:token}});
+
+                if (lkd22lakd2.status === 200) {
+                    return (await lkd22lakd2.text());
+                } else {
+                    return null;
+                }
+            },
+            exists: async k => {
+                const lkd22lakd2 = await fetch('https://us-west1-m-infra.cloudfunctions.net/code_action_pair/get', {headers: {o:'api',k, t: token}});
+
+                if (lkd22lakd2.status === 200) {
+                    return (await lkd22lakd2.text()) != null;
+                } else {
+                    return false;
+                }
+            },
+            del: async k => {
+                await fetch('https://us-west1-m-infra.cloudfunctions.net/code_action_pair/del', {headers: {o:'api',k, t: token}, method: 'POST'});
+            },
+            set: async (k, v) => {
+                await fetch('https://us-west1-m-infra.cloudfunctions.net/code_action_pair/set', {headers: {o:'api',k, t: token, 'Content-Type': 'text/plain'}, method: 'POST', body: v});
+            }
+        };
+
         const MAX_USER_VAR_SIZE = 100 * 1024; // 100 kb
         const MAX_USER_VAR_COUNT = 200;
         const setVars = new Set(); // keeps track of how many vars were set
@@ -735,6 +762,7 @@ module.exports = (code, context, helpers, fulfill, token, filename) => {
             connectRedis,
             rpSecured,
             entityLoader,
+            db,
         },
             code,
             filename,
