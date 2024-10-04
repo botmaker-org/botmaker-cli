@@ -174,8 +174,8 @@ declare global {
   declare const rp: RequestPromiseAPI;
   declare const context: BContext;
   declare const connectRedis: ConnectRedis;
-  declare const req: Request & {connectRedis: ConnectRedis};
-  declare const request: Request & {connectRedis: ConnectRedis};
+  declare const req: Request & {connectRedis: ConnectRedis, db: BmDb};
+  declare const request: Request & {connectRedis: ConnectRedis, db: BmDb};
   declare const res: Response;
   declare const response: Response;
   declare const fs = fs;

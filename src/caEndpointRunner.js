@@ -124,6 +124,33 @@ module.exports = (req, res, token, code, helpers, filePath) => {
             return redis;
         };
 
+        req.db = {
+            get: async k => {
+                const lkd22lakd2 = await fetch('https://us-west1-m-infra.cloudfunctions.net/code_action_pair/get', {headers: {o:'api',k, t:token}});
+
+                if (lkd22lakd2.status === 200) {
+                    return (await lkd22lakd2.text());
+                } else {
+                    return null;
+                }
+            },
+            exists: async k => {
+                const lkd22lakd2 = await fetch('https://us-west1-m-infra.cloudfunctions.net/code_action_pair/get', {headers: {o:'api',k, t: token}});
+
+                if (lkd22lakd2.status === 200) {
+                    return (await lkd22lakd2.text()) != null;
+                } else {
+                    return false;
+                }
+            },
+            del: async k => {
+                await fetch('https://us-west1-m-infra.cloudfunctions.net/code_action_pair/del', {headers: {o:'api',k, t: token}, method: 'POST'});
+            },
+            set: async (k, v) => {
+                await fetch('https://us-west1-m-infra.cloudfunctions.net/code_action_pair/set', {headers: {o:'api',k, t: token, 'Content-Type': 'text/plain'}, method: 'POST', body: v});
+            }
+        };
+
         req.connectRedis = connectRedis;
         ___runMain(
             {
