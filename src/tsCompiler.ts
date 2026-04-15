@@ -1,9 +1,9 @@
 import ts from "typescript";
-import { Project, SourceFile, FunctionDeclaration, ArrowFunction, FunctionExpression, SyntaxKind } from "ts-morph";
+import { Project, FunctionDeclaration, ArrowFunction, FunctionExpression, SyntaxKind } from "ts-morph";
 import path from "path";
 
 
-export type Error = {
+export type DiagnosticError = {
     message: string;
     category: ts.DiagnosticCategory;
     code: number;
@@ -170,8 +170,7 @@ const findDefaultExportFunction = (sourceCode: string): {
  * @returns A JSON schema describing the function parameters and return type
  */
 const generateJsonSchema = (
-    funcNode: FunctionDeclaration | ArrowFunction | FunctionExpression,
-    sourceFile: SourceFile
+    funcNode: FunctionDeclaration | ArrowFunction | FunctionExpression
 ): JsonSchema => {
     const schema: JsonSchema = {
         type: "object",
@@ -283,7 +282,7 @@ export type CompileResult ={
     inputSchema?: JsonSchema;
     outputSchema?: JsonSchema;
 } | {
-    errors: Error[];
+    errors: DiagnosticError[];
 }
 
 export const compile = async (tsCode: string, skipGlobals: boolean = false): Promise<CompileResult> => {
@@ -342,10 +341,6 @@ export const compile = async (tsCode: string, skipGlobals: boolean = false): Pro
                     return;
                 }
 
-                // Create a project and source file for analysis
-                const project = new Project({ useInMemoryFileSystem: true });
-                const morpSourceFile = project.createSourceFile("index.ts", tsCode);
-
                 // Get JSDoc for the function description
                 const functionJSDoc = defaultExportFunc.getLeadingCommentRanges()
                     .map(range => range.getText())
@@ -354,7 +349,7 @@ export const compile = async (tsCode: string, skipGlobals: boolean = false): Pro
                 const jsDocInfo = parseJSDoc(functionJSDoc);
 
                 // Generate JSON schema for the function
-                const inputSchema = generateJsonSchema(defaultExportFunc, morpSourceFile);
+                const inputSchema = generateJsonSchema(defaultExportFunc);
 
                 // Get return type
                 const returnType = defaultExportFunc.getReturnType();
@@ -389,7 +384,7 @@ export const compile = async (tsCode: string, skipGlobals: boolean = false): Pro
                         code: d.code,
                         start: d.start,
                         length: d.length,
-                    } as Error))
+                    } as DiagnosticError))
                 }));
 
                 return;
