@@ -74,9 +74,10 @@ export default function double(myNumber: number): number {
 }
 `;
 
-const createFileAndStatus = async (wpPath, ca, openVsCode) => {
+const createFileAndStatus = async (wpPath, ca, type, openVsCode) => {
   const baseName = importWorkspace.formatName(ca.name);
-  const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, 'js');
+  const ext = type === CaType.AI_FUNCTION ? 'ts' : 'js';
+  const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, ext);
 
   const filePath = path.join(wpPath, 'src', newFileName);
   await writeFile(filePath, ca.publishedCode, 'UTF-8');
@@ -105,7 +106,7 @@ const newCa = async (pwd, caName, type, openVsCode = false) => {
   const { token, cas } = await getBmc(wpPath);
   const resp = await createCa(token, newCa);
   const ca = JSON.parse(resp.body);
-  const status = await createFileAndStatus(wpPath, ca, openVsCode);
+  const status = await createFileAndStatus(wpPath, ca, type, openVsCode);
   const newCas = cas.concat(status);
   await saveBmc(wpPath,token,newCas);
 };
