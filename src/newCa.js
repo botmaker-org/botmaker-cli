@@ -13,8 +13,7 @@ const { createCa } = require("./bmService");
 const writeFile = util.promisify(fs.writeFile);
 
 const baseEndPointCa =
-`/// <reference path="../endpoint.d.ts" />
-const redis = req.connectRedis();
+`const redis = req.connectRedis();
 
 const main = async () => {
   // TODO my code here

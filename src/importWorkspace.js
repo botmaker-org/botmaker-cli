@@ -81,9 +81,7 @@ const importWorkspace = async (pwd, apiToken) => {
   for (const ca of cas) {
     const baseName = formatName(ca.name);
     ca.filename = await getName(srcFolder, baseName, ca.type === CaType.AI_FUNCTION ? 'ts' : 'js');
-    const code = ca.unPublishedCode || ca.publishedCode;
-    const content = ca.type === CaType.ENDPOINT ? `/// <reference path="../endpoint.d.ts" />\n${code}` : code;
-    await writeFile(path.join(srcFolder, ca.filename), content, "UTF-8");
+    await writeFile(path.join(srcFolder, ca.filename), ca.unPublishedCode || ca.publishedCode, "UTF-8");
   }
   const bmc = {
     cas,
