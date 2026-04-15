@@ -10,6 +10,9 @@ const getDiff = require("./getDiff");
 const importWorkspace = require("./importWorkspace");
 const CaType = require('./caTypes');
 
+const withEndpointRef = (type, code) =>
+  type === CaType.ENDPOINT ? `/// <reference path="../endpoint.d.ts" />\n${code}` : code;
+
 const writeFile = util.promisify(fs.writeFile);
 const rm = util.promisify(fs.unlink);
 
@@ -61,7 +64,7 @@ const makeChanges = async (wpPath, cas, status, changes) => {
       const ext = status.T === CaType.AI_FUNCTION ? 'ts' : 'js';
       const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, ext);
 
-      await writeFile(path.join(wpPath, 'src', newFileName), newVersion, 'UTF-8');
+      await writeFile(path.join(wpPath, 'src', newFileName), withEndpointRef(status.T, newVersion), 'UTF-8');
       status.fn = newFileName;
       console.log(chalk.green(`${path.join(wpPath, 'src', status.fn)} was added`));
     }
@@ -72,7 +75,7 @@ const makeChanges = async (wpPath, cas, status, changes) => {
     const ext = status.T === CaType.AI_FUNCTION ? 'ts' : 'js';
     const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, ext);
 
-    await writeFile(path.join(wpPath, 'src', newFileName), newVersion, 'UTF-8');
+    await writeFile(path.join(wpPath, 'src', newFileName), withEndpointRef(status.T, newVersion), 'UTF-8');
     console.log(chalk.green(`${path.join(wpPath, 'src', newFileName)} was added`));
     return cas.concat({
       publishedCode: status.P,
