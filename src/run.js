@@ -161,7 +161,7 @@ const runUserCa = async (wpPath, token, cas, ca, vars, params, volatile) => {
       const found = line.matchAll(/\<anonymous\>(:\d+:\d+)/g).next();
       console.error(chalk.red(` ❌ Fail in ${endTime}ms`))
       if (found.value) {
-        console.error(chalk.red(`${result.stack.split('\n')[0]} at ${file}${found.value[1]}`));
+        console.error(chalk.red(`${result.stack.split('\n')[0]} at ${filePath}${found.value[1]}`));
       } else {
         console.error(chalk.red(result.stack));
       }
