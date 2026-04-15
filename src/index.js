@@ -10,6 +10,7 @@ const getStatus = require('./getStatus');
 const publish = require('./publish');
 const rename = require('./rename');
 const listCas = require('./listCas');
+const CaType = require('./caTypes');
 
 const main = async (args) => {
   const pwd = process.cwd();
@@ -115,7 +116,7 @@ const main = async (args) => {
     case "new":
     case "n":
       const { caName: caName3, v: vsCode1, e } = arrgs;
-      await newCa(pwd, caName3, e ? "ENDPOINT" : "USER", vsCode1);
+      await newCa(pwd, caName3, e ? CaType.ENDPOINT : CaType.USER, vsCode1);
       break;
     case "publish":
       const { caName: caName5 } = arrgs;
