@@ -70,6 +70,9 @@ const main = async (args) => {
         }).option('e', {
           alias: 'endpoint',
           describe: 'Create as endpoint type',
+        }).option('a', {
+          alias: 'ai-function',
+          describe: 'Create as AI function type',
         })
     ).command(
       ['push [caName]'],
@@ -115,8 +118,9 @@ const main = async (args) => {
       break;
     case "new":
     case "n":
-      const { caName: caName3, v: vsCode1, e } = arrgs;
-      await newCa(pwd, caName3, e ? CaType.ENDPOINT : CaType.USER, vsCode1);
+      const { caName: caName3, v: vsCode1, e, a } = arrgs;
+      const newType = e ? CaType.ENDPOINT : a ? CaType.AI_FUNCTION : CaType.USER;
+      await newCa(pwd, caName3, newType, vsCode1);
       break;
     case "publish":
       const { caName: caName5 } = arrgs;
