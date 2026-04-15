@@ -291,13 +291,11 @@ export const compile = async (tsCode: string, skipGlobals: boolean = false): Pro
         throw new Error("No TypeScript code provided");
     }
     console.log("Compiling TypeScript code...");
-    const sourceFileName = "index.mts";
+    const sourceFileName = "index.ts";
 
     const sourceFile = ts.createSourceFile(sourceFileName, tsCode, ts.ScriptTarget.ESNext);
 
-    const defaultCompilerHost = ts.createCompilerHost({
-        moduleDetection: 3,
-    });
+    const defaultCompilerHost = ts.createCompilerHost({});
 
     const customCompilerHost: ts.CompilerHost = {
         ...defaultCompilerHost,
@@ -313,21 +311,19 @@ export const compile = async (tsCode: string, skipGlobals: boolean = false): Pro
     };
 
     const program = ts.createProgram({
-        rootNames: skipGlobals ? ["index.mts"] : ["index.mts"],
+        rootNames: skipGlobals ? ["index.ts"] : ["index.ts", path.join(import.meta.dirname, "../workspaceTemplate/index.d.ts")],
         options: {
             esModuleInterop: true,
-            types: [path.join(import.meta.dirname, "index.d.ts"), "node"],
+            types: ["node"],
             lib: ["lib.es2022.d.ts"],
             //typeRoots: ["./node_modules/@types"],
             //noLib: true,
             target: ts.ScriptTarget.ESNext,
-            module: ts.ModuleKind.NodeNext,
+            module: ts.ModuleKind.CommonJS,
             noEmitOnError: true,
             //skipLibCheck: true,
             //allowNonTsExtensions: true,
-            moduleDetection: 3, // force
-            moduleResolution: ts.ModuleResolutionKind.NodeNext,
-            isolatedModules: true,
+            moduleResolution: ts.ModuleResolutionKind.Node10,
         },
         host: customCompilerHost,
         projectReferences: undefined,
