@@ -4,6 +4,7 @@ const path = require('path');
 const chalk = require('chalk');
 const exec = require('child_process').exec;
 
+const CaType = require('./caTypes');
 const { getBmc, saveBmc } = require('./bmcConfig');
 const getWorkspacePath = require('./getWorkspacePath');
 const importWorkspace = require("./importWorkspace");
@@ -60,6 +61,19 @@ main()
   });
 `;
 
+const baseAiFunctionCa =
+`/**
+ * this function multyply by 2
+ *
+ * @param myNumber the number to multiply by 2
+ *
+ * @return the double
+ */
+export default function double(myNumber: number): number {
+    return myNumber * 2;
+}
+`;
+
 const createFileAndStatus = async (wpPath, ca, openVsCode) => {
   const baseName = importWorkspace.formatName(ca.name);
   const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, 'js');
@@ -77,8 +91,13 @@ const createFileAndStatus = async (wpPath, ca, openVsCode) => {
 }
 
 const newCa = async (pwd, caName, type, openVsCode = false) => {
+  const templateByType = {
+    [CaType.USER]: baseCa,
+    [CaType.ENDPOINT]: baseEndPointCa,
+    [CaType.AI_FUNCTION]: baseAiFunctionCa,
+  };
   const newCa = {
-    publishedCode: type === 'USER' ? baseCa : baseEndPointCa,
+    publishedCode: templateByType[type] ?? baseCa,
     name: caName,
     type: type,
   };
