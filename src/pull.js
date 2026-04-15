@@ -8,6 +8,7 @@ const { getBmc } = require('./bmcConfig');
 const getWorkspacePath = require('./getWorkspacePath');
 const getDiff = require("./getDiff");
 const importWorkspace = require("./importWorkspace");
+const CaType = require('./caTypes');
 
 const writeFile = util.promisify(fs.writeFile);
 const rm = util.promisify(fs.unlink);
@@ -57,7 +58,8 @@ const makeChanges = async (wpPath, cas, status, changes) => {
     } else {
       // new File
       const baseName = importWorkspace.formatName(status.N);
-      const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, 'js');
+      const ext = status.T === CaType.AI_FUNCTION ? 'ts' : 'js';
+      const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, ext);
 
       await writeFile(path.join(wpPath, 'src', newFileName), newVersion, 'UTF-8');
       status.fn = newFileName;
@@ -67,7 +69,8 @@ const makeChanges = async (wpPath, cas, status, changes) => {
     const newVersion = status.U || status.P;
     // new File
     const baseName = importWorkspace.formatName(status.N);
-    const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, 'js');
+    const ext = status.T === CaType.AI_FUNCTION ? 'ts' : 'js';
+    const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, ext);
 
     await writeFile(path.join(wpPath, 'src', newFileName), newVersion, 'UTF-8');
     console.log(chalk.green(`${path.join(wpPath, 'src', newFileName)} was added`));

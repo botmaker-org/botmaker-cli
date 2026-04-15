@@ -3,6 +3,7 @@ const util = require('util');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { getAllCas, getCustomerContext } = require('./bmService')
+const CaType = require('./caTypes');
 const fse = require('fs-extra');
 
 const readFile = util.promisify(fs.readFile);
@@ -79,7 +80,7 @@ const importWorkspace = async (pwd, apiToken) => {
   const srcFolder = path.join(workspacePath, "src");
   for (const ca of cas) {
     const baseName = formatName(ca.name);
-    ca.filename = await getName(srcFolder, baseName, 'js');
+    ca.filename = await getName(srcFolder, baseName, ca.type === CaType.AI_FUNCTION ? 'ts' : 'js');
     await writeFile(path.join(srcFolder, ca.filename), ca.unPublishedCode || ca.publishedCode, "UTF-8");
   }
   const bmc = {
