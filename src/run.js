@@ -11,10 +11,39 @@ const { getBmc } = require('./bmcConfig');
 const express = require('express');
 const { getCaByNameOrPath } = require('./getStatus');
 const caEndpointRunner = require('./caEndpointRunner');
+const CaType = require('./caTypes');
+const { Project, ts } = require('ts-morph');
 
 const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
 const exists = util.promisify(fs.exists);
+
+let _compileFn = null;
+const getCompile = async () => {
+  if (_compileFn) return _compileFn;
+  const tsFilePath = path.join(__dirname, 'tsCompiler.ts');
+  const project = new Project({
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ESNext,
+      esModuleInterop: true,
+      skipLibCheck: true,
+    }
+  });
+  project.addSourceFileAtPath(tsFilePath);
+  const sourceFile = project.getSourceFileOrThrow(tsFilePath);
+  sourceFile.replaceWithText(sourceFile.getText().replace(/import\.meta\.dirname/g, '__dirname'));
+  const emitResult = project.emitToMemory();
+  const jsFile = emitResult.getFiles().find(f => f.filePath.includes('tsCompiler'));
+  if (!jsFile) throw new Error('Failed to emit tsCompiler.ts');
+  const mod = { exports: {} };
+  // eslint-disable-next-line no-new-func
+  new Function('module', 'exports', 'require', '__dirname', '__filename', jsFile.text)(
+    mod, mod.exports, require, __dirname, tsFilePath
+  );
+  _compileFn = mod.exports.compile;
+  return _compileFn;
+};
 
 const doubleArrayToObject = array => {
   const obj = {};
@@ -152,18 +181,77 @@ const runUserCa = async (wpPath, token, cas, ca, vars, params, volatile) => {
   process.exit(0);
 }
 
+const runAiFunctionCa = async (wpPath, token, cas, ca, vars, params, volatile) => {
+  const { code: tsCode, helpers, filePath } = await getCodeAnHelpers(wpPath, cas, ca);
+  const compile = await getCompile();
+  const compileResult = await compile(tsCode);
+  if ('errors' in compileResult) {
+    const msgs = compileResult.errors
+      .map(e => (typeof e.message === 'string' ? e.message : e.message.messageText))
+      .join('\n');
+    throw new Error(`TypeScript compilation failed:\n${msgs}`);
+  }
+  const contextJson = await readFile(path.join(wpPath, 'context.json'), 'utf8');
+  const context = JSON.parse(contextJson);
+  const commandVars = doubleArrayToObject(vars);
+  const commandParameters = doubleArrayToObject(params);
+  context.userData.variables = { ...context.userData.variables, ...commandVars };
+  context.params = { ...context.params, ...commandParameters };
+  const startTime = new Date().getTime();
+  const result = await new Promise((fulfill, reject) => {
+    try {
+      caRunner(compileResult.code, context, helpers, fulfill, token, filePath);
+    } catch (err) {
+      reject(err);
+    }
+  });
+  const endTime = new Date().getTime() - startTime;
+  if (result) {
+    if (result.error && result.stack) {
+      const line = result.stack.split('\n')[1] || '';
+      const found = line.matchAll(/\<anonymous\>(:\d+:\d+)/g).next();
+      console.error(chalk.red(` ❌ Fail in ${endTime}ms`));
+      if (found.value) {
+        console.error(chalk.red(`${result.stack.split('\n')[0]} at ${filePath}${found.value[1]}`));
+      } else {
+        console.error(chalk.red(result.stack));
+      }
+    } else if (result.error) {
+      console.error(chalk.red(` ❌ Fail in ${endTime}ms`));
+      console.error(chalk.red(result.error));
+    } else {
+      const resultRendered = resolveRenderer(result.resultState, context);
+      console.log(resultRendered);
+      console.log(chalk.green(` ✓ Success in ${endTime}ms`));
+      if (!volatile) {
+        const newContext = {
+          ...context,
+          userData: {
+            ...context.userData,
+            variables: { ...context.userData.variables, ...result.resultState.user }
+          }
+        };
+        await writeFile(path.join(wpPath, 'context.json'), JSON.stringify(newContext, null, 4), 'utf-8');
+      }
+    }
+  }
+  process.exit(0);
+};
+
 const run = async (pwd, file, { vars, params, volatile, endpoint, port = 7070 }) => {
-  const wpPath = await getWorkspacePath(pwd)
+  const wpPath = await getWorkspacePath(pwd);
   const { token, cas } = await getBmc(wpPath);
   const ca = await getCaByNameOrPath(wpPath, cas, file);
-  const type = endpoint ? "ENDPOINT" : (ca.type || "USER");
-  if (type === "USER") {
+  const type = endpoint ? CaType.ENDPOINT : (ca.type || CaType.USER);
+  if (type === CaType.USER) {
     await runUserCa(wpPath, token, cas, ca, vars, params, volatile);
-  } else if (type === "ENDPOINT" || type === "SCHEDULE") {
+  } else if (type === CaType.AI_FUNCTION) {
+    await runAiFunctionCa(wpPath, token, cas, ca, vars, params, volatile);
+  } else if (type === CaType.ENDPOINT || type === 'SCHEDULE') {
     await runEndpointCa(wpPath, token, cas, ca, port);
   } else {
-    throw new Error(`'${type}' invalid client action type.`)
+    throw new Error(`'${type}' invalid client action type.`);
   }
-}
+};
 
 module.exports = run;
