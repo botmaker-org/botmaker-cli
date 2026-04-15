@@ -42,6 +42,7 @@ const getCompile = async () => {
     mod, mod.exports, require, __dirname, tsFilePath
   );
   _compileFn = mod.exports.compile;
+  if (typeof _compileFn !== 'function') throw new Error('tsCompiler bridge failed to export compile()');
   return _compileFn;
 };
 
