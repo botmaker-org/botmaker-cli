@@ -185,7 +185,8 @@ const runUserCa = async (wpPath, token, cas, ca, vars, params, volatile) => {
 const runAiFunctionCa = async (wpPath, token, cas, ca, vars, params, volatile) => {
   const { code: tsCode, helpers, filePath } = await getCodeAnHelpers(wpPath, cas, ca);
   const compile = await getCompile();
-  const compileResult = await compile(tsCode);
+  const mcpGlobalsPath = path.join(__dirname, '../workspaceTemplate/mcp.d.ts');
+  const compileResult = await compile(tsCode, mcpGlobalsPath);
   if ('errors' in compileResult) {
     const msgs = compileResult.errors
       .map(e => (typeof e.message === 'string' ? e.message : e.message.messageText))
@@ -198,43 +199,43 @@ const runAiFunctionCa = async (wpPath, token, cas, ca, vars, params, volatile) =
   const commandParameters = doubleArrayToObject(params);
   context.userData.variables = { ...context.userData.variables, ...commandVars };
   context.params = { ...context.params, ...commandParameters };
+
+  const User = {
+    get: (key) => context.userData.variables[key],
+    set: (key, value) => { context.userData.variables[key] = value; },
+  };
+
+  const mod = { exports: {} };
+  // eslint-disable-next-line no-new-func
+  new Function('module', 'exports', 'require', '__dirname', '__filename', 'User', compileResult.code)(
+    mod, mod.exports, require, path.dirname(filePath), filePath, User
+  );
+
+  const fn = mod.exports.default || mod.exports;
+  if (typeof fn !== 'function') throw new Error('MCP CA must export a default function');
+
+  const paramOrder = Object.keys(compileResult.inputSchema?.properties || {});
+  const paramValues = paramOrder.length > 0
+    ? paramOrder.map(k => commandParameters[k])
+    : [commandParameters];
+
   const startTime = new Date().getTime();
-  const result = await new Promise((fulfill, reject) => {
-    try {
-      caRunner(compileResult.code, context, helpers, fulfill, token, filePath);
-    } catch (err) {
-      reject(err);
+  try {
+    const result = await fn(...paramValues);
+    const endTime = new Date().getTime() - startTime;
+    console.log(JSON.stringify(result, null, 2));
+    console.log(chalk.green(` ✓ Success in ${endTime}ms`));
+    if (!volatile) {
+      const newContext = {
+        ...context,
+        userData: { ...context.userData, variables: { ...context.userData.variables } }
+      };
+      await writeFile(path.join(wpPath, 'context.json'), JSON.stringify(newContext, null, 4), 'utf-8');
     }
-  });
-  const endTime = new Date().getTime() - startTime;
-  if (result) {
-    if (result.error && result.stack) {
-      const line = result.stack.split('\n')[1] || '';
-      const found = line.matchAll(/\<anonymous\>(:\d+:\d+)/g).next();
-      console.error(chalk.red(` ❌ Fail in ${endTime}ms`));
-      if (found.value) {
-        console.error(chalk.red(`${result.stack.split('\n')[0]} at ${filePath}${found.value[1]}`));
-      } else {
-        console.error(chalk.red(result.stack));
-      }
-    } else if (result.error) {
-      console.error(chalk.red(` ❌ Fail in ${endTime}ms`));
-      console.error(chalk.red(result.error));
-    } else {
-      const resultRendered = resolveRenderer(result.resultState, context);
-      console.log(resultRendered);
-      console.log(chalk.green(` ✓ Success in ${endTime}ms`));
-      if (!volatile) {
-        const newContext = {
-          ...context,
-          userData: {
-            ...context.userData,
-            variables: { ...context.userData.variables, ...result.resultState.user }
-          }
-        };
-        await writeFile(path.join(wpPath, 'context.json'), JSON.stringify(newContext, null, 4), 'utf-8');
-      }
-    }
+  } catch (err) {
+    const endTime = new Date().getTime() - startTime;
+    console.error(chalk.red(` ❌ Fail in ${endTime}ms`));
+    console.error(chalk.red(err.stack || err.message));
   }
   process.exit(0);
 };

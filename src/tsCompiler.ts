@@ -285,7 +285,7 @@ export type CompileResult ={
     errors: DiagnosticError[];
 }
 
-export const compile = async (tsCode: string, skipGlobals: boolean = false): Promise<CompileResult> => {
+export const compile = async (tsCode: string, globalsPath?: string): Promise<CompileResult> => {
     if (!tsCode || tsCode.trim() === "") {
         throw new Error("No TypeScript code provided");
     }
@@ -309,20 +309,20 @@ export const compile = async (tsCode: string, skipGlobals: boolean = false): Pro
         },
     };
 
+    const rootNames = globalsPath
+        ? ["index.ts", globalsPath]
+        : ["index.ts"];
+
     const program = ts.createProgram({
-        rootNames: skipGlobals ? ["index.ts"] : ["index.ts", path.join(import.meta.dirname, "../workspaceTemplate/index.d.ts")],
+        rootNames,
         options: {
             esModuleInterop: true,
-            types: ["node"],
-            lib: ["lib.es2022.d.ts"],
-            //typeRoots: ["./node_modules/@types"],
-            //noLib: true,
+            lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
             target: ts.ScriptTarget.ESNext,
             module: ts.ModuleKind.CommonJS,
             noEmitOnError: true,
-            //skipLibCheck: true,
-            //allowNonTsExtensions: true,
             moduleResolution: ts.ModuleResolutionKind.Node10,
+            ignoreDeprecations: "6.0",
         },
         host: customCompilerHost,
         projectReferences: undefined,

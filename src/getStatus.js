@@ -136,6 +136,8 @@ Local = lowercase  -> p u f n t
 */
 const posibleChanges = Object.values(ChangeType);
 
+const TYPE_FOLDERS = ['user', 'endpoint', 'mcp'];
+
 const getCaPath = async (wpPath, caName) => {
   const posiblePaths = [
     caName,
@@ -143,12 +145,17 @@ const getCaPath = async (wpPath, caName) => {
     caName && path.join(wpPath, 'src', caName),
     caName && path.join(wpPath, caName + ".js"),
     caName && path.join(wpPath, 'src', caName + ".js"),
+    caName && path.join(wpPath, caName + ".ts"),
+    caName && path.join(wpPath, 'src', caName + ".ts"),
+    ...TYPE_FOLDERS.map(f => caName && path.join(wpPath, 'src', f, caName)),
+    ...TYPE_FOLDERS.map(f => caName && path.join(wpPath, 'src', f, caName + ".js")),
+    ...TYPE_FOLDERS.map(f => caName && path.join(wpPath, 'src', f, caName + ".ts")),
   ];
 
-  for (const path of posiblePaths) {
-    if (!path) continue;
-    if (await exists(path)) {
-      return path;
+  for (const p of posiblePaths) {
+    if (!p) continue;
+    if (await exists(p)) {
+      return p;
     }
   }
   return null;
@@ -170,14 +177,22 @@ const getCaByNameOrPath = async (wpPath, cas, caName) => {
     return byPath;
   }
 
-  const byFileName = cas.find(ca => ca.filename === caName || ca.filename === caName + ".js");
+  const byFileName = cas.find(ca => {
+    const base = path.basename(ca.filename || '');
+    return ca.filename === caName
+      || base === caName
+      || base === caName + ".js"
+      || base === caName + ".ts";
+  });
   if (byFileName) {
     return byFileName;
   }
 
   const nonAdded = await getCaPath(wpPath,caName);
   if(nonAdded){
-    return {filename: path.basename(nonAdded)}
+    const srcPath = path.join(wpPath, 'src');
+    const relative = path.relative(srcPath, nonAdded);
+    return {filename: relative}
   }
   throw new Error(`'${caName}' not found`);
 }
@@ -284,8 +299,15 @@ async function* getStatusChanges(pwd) {
   const remoteCasRes = await getAllCas(token);
   const remoteCas = JSON.parse(remoteCasRes.body);
   const newCas = remoteCas.filter(rca => cas.every(lca => lca.id !== rca.id));
-  const localCas = await readdir(path.join(wpPath, 'src'));
-  const newLocalCasFiles = localCas.map((ca) => path.basename(ca)).filter(filename => cas.every(lca => lca.filename !== filename));
+  const allLocalFiles = [];
+  for (const folder of TYPE_FOLDERS) {
+    const folderPath = path.join(wpPath, 'src', folder);
+    if (await exists(folderPath)) {
+      const files = await readdir(folderPath);
+      allLocalFiles.push(...files.map(f => `${folder}/${f}`));
+    }
+  }
+  const newLocalCasFiles = allLocalFiles.filter(filename => cas.every(lca => lca.filename !== filename));
   const newLocalCas = newLocalCasFiles.map(filename => ({filename}))
   const allCas = [...cas, ...newCas, ...newLocalCas].sort((ca1, ca2) => {
     const c1 = ca1.name || ca1.filename;

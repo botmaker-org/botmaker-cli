@@ -40,8 +40,11 @@ const rename = async (pwd, caName, newName) => {
   }
   const toUpdate = [{id:codeAction.id, name : newName}];
   await updateCas(token,toUpdate);
+  const folder = path.dirname(codeAction.filename);
+  const ext = path.extname(codeAction.filename).slice(1);
   const baseName = importWorkspace.formatName(newName);
-  const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, 'js');
+  const basename = await importWorkspace.getName(path.join(wpPath, 'src', folder), baseName, ext);
+  const newFileName = `${folder}/${basename}`;
   await renameFile(path.join(wpPath, 'src', codeAction.filename), path.join(wpPath, 'src', newFileName));
   console.log(chalk.green(`Changed ${caName} name to ${newName}.`))
   const newCas = cas.map( ca =>

@@ -9,6 +9,8 @@ const getWorkspacePath = require('./getWorkspacePath');
 const getDiff = require("./getDiff");
 const importWorkspace = require("./importWorkspace");
 const CaType = require('./caTypes');
+const { getTypeFolder } = require('./caTypes');
+const fse = require('fs-extra');
 
 const writeFile = util.promisify(fs.writeFile);
 const rm = util.promisify(fs.unlink);
@@ -57,9 +59,12 @@ const makeChanges = async (wpPath, cas, status, changes) => {
       await writeFile(path.join(wpPath, 'src', status.fn), newVersion, 'UTF-8');
     } else {
       // new File
+      const folder = getTypeFolder(status.T);
       const baseName = importWorkspace.formatName(status.N);
       const ext = status.T === CaType.AI_FUNCTION ? 'ts' : 'js';
-      const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, ext);
+      await fse.ensureDir(path.join(wpPath, 'src', folder));
+      const basename = await importWorkspace.getName(path.join(wpPath, 'src', folder), baseName, ext);
+      const newFileName = `${folder}/${basename}`;
 
       await writeFile(path.join(wpPath, 'src', newFileName), newVersion, 'UTF-8');
       status.fn = newFileName;
@@ -68,9 +73,12 @@ const makeChanges = async (wpPath, cas, status, changes) => {
   } else if (wasAdded) {
     const newVersion = status.U || status.P;
     // new File
+    const folder = getTypeFolder(status.T);
     const baseName = importWorkspace.formatName(status.N);
     const ext = status.T === CaType.AI_FUNCTION ? 'ts' : 'js';
-    const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, ext);
+    await fse.ensureDir(path.join(wpPath, 'src', folder));
+    const basename = await importWorkspace.getName(path.join(wpPath, 'src', folder), baseName, ext);
+    const newFileName = `${folder}/${basename}`;
 
     await writeFile(path.join(wpPath, 'src', newFileName), newVersion, 'UTF-8');
     console.log(chalk.green(`${path.join(wpPath, 'src', newFileName)} was added`));

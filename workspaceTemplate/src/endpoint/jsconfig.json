@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "resolveJsonModule": true
+  },
+  "typeAcquisition": {
+    "enable": true,
+    "include": [
+      "request-promise",
+      "redis",
+      "fs",
+      "lodash",
+      "moment",
+      "fast-csv",
+      "md5",
+      "js-sha256",
+      "xml2js",
+      "secure-random",
+      "@turf/turf",
+      "@turf/helpers",
+      "jsonwebtoken",
+      "bluebird",
+      "googleapis",
+      "express"
+    ]
+  },
+  "include": [
+    "./**/*.js",
+    "../../index.d.ts",
+    "../../endpoint.d.ts",
+    "../../context.json"
+  ]
+}

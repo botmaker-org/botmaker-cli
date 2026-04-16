@@ -55,7 +55,7 @@ exports.getCustomerContext = async (token, customerId = 'rnd') => {
 }
 
 
-exports.publishCa = async (token, caId) => {
+exports.publishCa = async (token, caId) => {  
   const headers = {
     'Accept': 'application/json',
     'access-token': token,

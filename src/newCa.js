@@ -1,10 +1,12 @@
 const util = require('util');
 const fs = require('fs');
 const path = require('path');
+const fse = require('fs-extra');
 const chalk = require('chalk');
 const exec = require('child_process').exec;
 
 const CaType = require('./caTypes');
+const { getTypeFolder } = require('./caTypes');
 const { getBmc, saveBmc } = require('./bmcConfig');
 const getWorkspacePath = require('./getWorkspacePath');
 const importWorkspace = require("./importWorkspace");
@@ -75,11 +77,14 @@ export default function double(myNumber: number): number {
 `;
 
 const createFileAndStatus = async (wpPath, ca, type, openVsCode) => {
+  const folder = getTypeFolder(type);
   const baseName = importWorkspace.formatName(ca.name);
   const ext = type === CaType.AI_FUNCTION ? 'ts' : 'js';
-  const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, ext);
+  const basename = await importWorkspace.getName(path.join(wpPath, 'src', folder), baseName, ext);
+  const newFileName = `${folder}/${basename}`;
 
   const filePath = path.join(wpPath, 'src', newFileName);
+  await fse.ensureDir(path.join(wpPath, 'src', folder));
   await writeFile(filePath, ca.publishedCode, 'UTF-8');
   console.log(chalk.green(`${filePath} was added`));
   if(openVsCode){
