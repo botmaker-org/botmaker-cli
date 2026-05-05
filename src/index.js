@@ -73,6 +73,12 @@ const main = async (args) => {
         }).option('a', {
           alias: 'ai-function',
           describe: 'Create as AI function type',
+        }).option('w', {
+          alias: 'whatsapp-flow',
+          describe: 'Create as WhatsApp flow type',
+        }).option('f', {
+          alias: 'webchat-form',
+          describe: 'Create as Webchat form type',
         })
     ).command(
       ['push [caName]'],
@@ -118,8 +124,12 @@ const main = async (args) => {
       break;
     case "new":
     case "n":
-      const { caName: caName3, v: vsCode1, e, a } = arrgs;
-      const newType = e ? CaType.ENDPOINT : a ? CaType.AI_FUNCTION : CaType.USER;
+      const { caName: caName3, v: vsCode1, e, a, w, f } = arrgs;
+      const newType = e ? CaType.ENDPOINT
+        : a ? CaType.AI_FUNCTION
+        : w ? CaType.WHATSAPP_FLOW
+        : f ? CaType.WEBCHAT_FORM
+        : CaType.USER;
       await newCa(pwd, caName3, newType, vsCode1);
       break;
     case "publish":

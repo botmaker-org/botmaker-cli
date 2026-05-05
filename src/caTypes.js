@@ -2,16 +2,20 @@ const CaType = Object.freeze({
   USER: 'USER',
   ENDPOINT: 'ENDPOINT',
   AI_FUNCTION: 'AI_FUNCTION',
+  WHATSAPP_FLOW: 'WHATSAPP_FLOW',
+  WEBCHAT_FORM: 'WEBCHAT_FORM',
 });
 
 const getTypeFolder = (type) => {
   if (type === CaType.ENDPOINT) return 'endpoint';
   if (type === CaType.AI_FUNCTION) return 'mcp';
   if (type === CaType.USER) return 'user';
+  if (type === CaType.WHATSAPP_FLOW) return 'whatsappflow';
+  if (type === CaType.WEBCHAT_FORM) return 'webchatforms';
   return null;
 };
 
-const TYPE_FOLDERS = ['user', 'endpoint', 'mcp'];
+const TYPE_FOLDERS = ['user', 'endpoint', 'mcp', 'whatsappflow', 'webchatforms'];
 
 const cleanFolder = (folder) => (folder || '').replace(/^\/+|\/+$/g, '');
 

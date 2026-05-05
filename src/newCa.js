@@ -76,6 +76,16 @@ export default function double(myNumber: number): number {
 }
 `;
 
+const baseWhatsappFlowCa = fs.readFileSync(
+  path.join(__dirname, 'flowSnippets', 'flow_basic_template.ts'),
+  'utf8',
+);
+
+const baseWebchatFormCa = fs.readFileSync(
+  path.join(__dirname, 'formSnippets', 'form_basic_template.ts'),
+  'utf8',
+);
+
 const createFileAndStatus = async (wpPath, ca, type, openVsCode) => {
   const remoteFolder = ca.folder || '';
   const baseName = importWorkspace.formatName(ca.name);
@@ -106,6 +116,8 @@ const newCa = async (pwd, caName, type, openVsCode = false) => {
     [CaType.USER]: baseCa,
     [CaType.ENDPOINT]: baseEndPointCa,
     [CaType.AI_FUNCTION]: baseAiFunctionCa,
+    [CaType.WHATSAPP_FLOW]: baseWhatsappFlowCa,
+    [CaType.WEBCHAT_FORM]: baseWebchatFormCa,
   };
   const newCa = {
     publishedCode: templateByType[type] ?? baseCa,
