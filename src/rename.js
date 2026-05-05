@@ -13,12 +13,13 @@ const importWorkspace = require("./importWorkspace");
 const renameFile = util.promisify(fs.rename);
 
 const hasIncomingChanges = (changes) => {
-  return changes.some(c => 
-    c === ChangeType.INCOMING_CHANGES 
+  return changes.some(c =>
+    c === ChangeType.INCOMING_CHANGES
     || c === ChangeType.REMOVE_REMOTE
     || c === ChangeType.NEW_CA
     || c === ChangeType.RENAMED
     || c === ChangeType.TYPE_CHANGED
+    || c === ChangeType.FOLDER_CHANGED
   );
 }
 
@@ -40,12 +41,12 @@ const rename = async (pwd, caName, newName) => {
   }
   const toUpdate = [{id:codeAction.id, name : newName}];
   await updateCas(token,toUpdate);
-  const folder = path.dirname(codeAction.filename);
+  const dir = path.dirname(codeAction.filename);
   const ext = path.extname(codeAction.filename).slice(1);
   const baseName = importWorkspace.formatName(newName);
-  const basename = await importWorkspace.getName(path.join(wpPath, 'src', folder), baseName, ext);
-  const newFileName = `${folder}/${basename}`;
-  await renameFile(path.join(wpPath, 'src', codeAction.filename), path.join(wpPath, 'src', newFileName));
+  const basename = await importWorkspace.getName(path.join(wpPath, dir), baseName, ext);
+  const newFileName = (dir === '.' || dir === '') ? basename : `${dir}/${basename}`;
+  await renameFile(path.join(wpPath, codeAction.filename), path.join(wpPath, newFileName));
   console.log(chalk.green(`Changed ${caName} name to ${newName}.`))
   const newCas = cas.map( ca =>
     codeAction.id === ca.id ? {...ca, name: newName, filename: newFileName} : ca

@@ -20,30 +20,44 @@ const checkClientActionLength = (text, caName) => {
 }
 
 const getPushChanges = (status, changes) => {
-  const hasLocalChanges = changes.includes(getStatus.ChangeType.LOCAL_CHANGES);
-  if (!hasLocalChanges) {
+  const hasLocalCode = changes.includes(ChangeType.LOCAL_CHANGES);
+  const hasLocalFolder = changes.includes(ChangeType.LOCAL_FOLDER_CHANGED);
+  if (!hasLocalCode && !hasLocalFolder) {
     return;
   }
 
-  return {
-    id: status.id,
-    unPublishedCode: status.f
-  }
+  const payload = { id: status.id };
+  if (hasLocalCode) payload.unPublishedCode = status.f;
+  if (hasLocalFolder) payload.folder = status.g || '';
+  return { payload, fn: status.fn };
 }
 
-const applyPush = async (token,changes) => {
-  await updateCas(token,changes)
+const applyPush = async (token, payloads) => {
+  await updateCas(token, payloads);
 }
 
 const hasIncomingChanges = (changes) => {
-  return changes.some(c => 
-    c === ChangeType.INCOMING_CHANGES 
+  return changes.some(c =>
+    c === ChangeType.INCOMING_CHANGES
     || c === ChangeType.REMOVE_REMOTE
     || c === ChangeType.NEW_CA
     || c === ChangeType.RENAMED
     || c === ChangeType.TYPE_CHANGED
+    || c === ChangeType.FOLDER_CHANGED
   );
 }
+
+const applyToCas = (cas, updates) => cas.map(ca => {
+  const u = updates.find(x => x.payload.id === ca.id);
+  if (!u) return ca;
+  const next = { ...ca };
+  if (u.payload.unPublishedCode !== undefined) next.unPublishedCode = u.payload.unPublishedCode;
+  if (u.payload.folder !== undefined) {
+    next.folder = u.payload.folder;
+    next.filename = u.fn;
+  }
+  return next;
+});
 
 const singlePush = async (pwd, caName) => {
   const wpPath = await getWorkspacePath(pwd)
@@ -56,13 +70,13 @@ const singlePush = async (pwd, caName) => {
     console.log(chalk.green('Nothing to push!. No local changes found.'))
     return;
   }
-  checkClientActionLength(pushChanges.unPublishedCode, caName);
+  if (pushChanges.payload.unPublishedCode !== undefined) {
+    checkClientActionLength(pushChanges.payload.unPublishedCode, caName);
+  }
   const { token, cas } = await getBmc(wpPath);
-  await applyPush(token,[pushChanges]);
-  const newCas = cas.map( ca =>
-    pushChanges.id === ca.id ? {...ca, unPublishedCode: pushChanges.unPublishedCode} : ca
-  );
-  await saveBmc(wpPath,token,newCas);
+  await applyPush(token, [pushChanges.payload]);
+  const newCas = applyToCas(cas, [pushChanges]);
+  await saveBmc(wpPath, token, newCas);
 }
 
 const completePush = async (pwd) => {
@@ -75,9 +89,11 @@ const completePush = async (pwd) => {
     if (hasIncomingChanges(changes)){
       throw new Error('There is incoming changes you must make an pull first.');
     }
-    const pushChanges = getPushChanges(status, changes);    
+    const pushChanges = getPushChanges(status, changes);
     if (pushChanges) {
-      checkClientActionLength(pushChanges.unPublishedCode, status.n);
+      if (pushChanges.payload.unPublishedCode !== undefined) {
+        checkClientActionLength(pushChanges.payload.unPublishedCode, status.n);
+      }
       toPush.push(pushChanges);
     }
   }
@@ -86,16 +102,16 @@ const completePush = async (pwd) => {
     return;
   }
   console.log(chalk.yellow('Uploading changes for:'));
-  toPush.forEach( update => {
-    const ca = cas.find(c => c.id === update.id);
-    console.log(chalk.yellow(` * ${chalk.italic(ca.filename)} `) + chalk.grey(ca.name))
+  toPush.forEach(update => {
+    const ca = cas.find(c => c.id === update.payload.id);
+    const tags = [];
+    if (update.payload.unPublishedCode !== undefined) tags.push('code');
+    if (update.payload.folder !== undefined) tags.push(`folder="${update.payload.folder}"`);
+    console.log(chalk.yellow(` * ${chalk.italic(update.fn)} `) + chalk.grey(`${ca.name} [${tags.join(', ')}]`))
   })
-  await applyPush(token,toPush);
-  const newCas = cas.map( ca => {
-    const updated = toPush.find( cap => cap.id === ca.id);
-    return updated ? {...ca, unPublishedCode: updated.unPublishedCode} : ca;
-  });
-  await saveBmc(wpPath,token,newCas);
+  await applyPush(token, toPush.map(t => t.payload));
+  const newCas = applyToCas(cas, toPush);
+  await saveBmc(wpPath, token, newCas);
 }
 
 const push = async (pwd, caName, forPublish) => {

@@ -57,7 +57,7 @@ const doubleArrayToObject = array => {
 const require_core_action_pattern = /require\((?:(?:'([a-zA-Z0-9_-]*))'|(?:"([a-zA-Z0-9_-]*)"))\)/g
 
 const getCodeAnHelpers = async (wpPath, cas, ca) => {
-  const filePath = path.join(wpPath, 'src', ca.filename);
+  const filePath = path.join(wpPath, ca.filename);
   const helpers = {};
 
   let code = await readFile(filePath, "utf8");
@@ -66,8 +66,8 @@ const getCodeAnHelpers = async (wpPath, cas, ca) => {
   while ((match = require_core_action_pattern.exec(code)) != null) {
     const req = match[1] || match[2];
     if (!req) continue
-    const posibleReqFile = (cas.find(c => c.name === req) || {}).filename || (req + ".js")
-    const posibleUtils = path.join(wpPath, 'src', posibleReqFile);
+    const posibleReqFile = (cas.find(c => c.name === req) || {}).filename || `src/${req}.js`;
+    const posibleUtils = path.join(wpPath, posibleReqFile);
     if (await exists(posibleUtils)) {
       let helper = await readFile(posibleUtils, "utf8");
       const parsedHelper = "({" + helper.replace(/function /, "").replace(/function /g, ",") + "})\n//# sourceURL=" + posibleUtils;

@@ -9,11 +9,41 @@ const getWorkspacePath = require('./getWorkspacePath');
 const getDiff = require("./getDiff");
 const importWorkspace = require("./importWorkspace");
 const CaType = require('./caTypes');
-const { getTypeFolder } = require('./caTypes');
+const { getTypeFolder, buildLocalRelPath } = require('./caTypes');
 const fse = require('fs-extra');
 
 const writeFile = util.promisify(fs.writeFile);
 const rm = util.promisify(fs.unlink);
+const renameFile = util.promisify(fs.rename);
+const exists = util.promisify(fs.exists);
+
+const targetDirForNew = (wpPath, type, folder) => {
+  const typeFolder = getTypeFolder(type);
+  return typeFolder
+    ? path.join(wpPath, 'src', typeFolder, folder || '')
+    : path.join(wpPath, folder || '');
+};
+
+const createNewFile = async (wpPath, status, content) => {
+  const baseName = importWorkspace.formatName(status.N);
+  const ext = status.T === CaType.AI_FUNCTION ? 'ts' : 'js';
+  const targetDir = targetDirForNew(wpPath, status.T, status.D);
+  await fse.ensureDir(targetDir);
+  const basename = await importWorkspace.getName(targetDir, baseName, ext);
+  const newFileName = buildLocalRelPath(status.T, status.D, basename);
+  await writeFile(path.join(wpPath, newFileName), content, 'UTF-8');
+  return newFileName;
+};
+
+const moveLocalFile = async (wpPath, oldRel, newRel) => {
+  const oldAbs = path.join(wpPath, oldRel);
+  const newAbs = path.join(wpPath, newRel);
+  if (oldAbs === newAbs) return;
+  await fse.ensureDir(path.dirname(newAbs));
+  if (await exists(oldAbs)) {
+    await renameFile(oldAbs, newAbs);
+  }
+};
 
 const makeChanges = async (wpPath, cas, status, changes) => {
   const notAdded = changes.includes(getStatus.ChangeType.NOT_ADDED);
@@ -22,6 +52,7 @@ const makeChanges = async (wpPath, cas, status, changes) => {
   const wasAdded = changes.includes(getStatus.ChangeType.NEW_CA);
   const removeLocal = changes.includes(getStatus.ChangeType.REMOVE_LOCAL);
   const removeRemote = changes.includes(getStatus.ChangeType.REMOVE_REMOTE);
+  const hasFolderChanged = changes.includes(getStatus.ChangeType.FOLDER_CHANGED);
 
   if (notAdded) {
     return cas;
@@ -31,13 +62,13 @@ const makeChanges = async (wpPath, cas, status, changes) => {
     return cas;
   }
   if (hasLocalChanges && removeRemote) {
-    console.log(chalk.bgRed(`WARNING: ${path.join(wpPath, 'src', status.fn)} has local changes but was deleted remotly.`));
+    console.log(chalk.bgRed(`WARNING: ${path.join(wpPath, status.fn)} has local changes but was deleted remotly.`));
     return cas;
   }
 
   if (removeRemote) {
-    console.log(chalk.red(`${path.join(wpPath, 'src', status.fn)} was deleted`));
-    await rm(path.join(wpPath, 'src', status.fn))
+    console.log(chalk.red(`${path.join(wpPath, status.fn)} was deleted`));
+    await rm(path.join(wpPath, status.fn))
     return cas.filter(ca => ca.id !== status.id);
 
   } else if (hasLocalChanges && hasIncomingChanges) {
@@ -45,43 +76,66 @@ const makeChanges = async (wpPath, cas, status, changes) => {
     const original = status.u || status.p;
     const local = status.f;
     const { conflict, result } = getDiff.getMerge(local, original, remote);
-    if (conflict) {
-      console.log(chalk.bgRed(`WARNING: ${path.join(wpPath, 'src', status.fn)} has merge conflicts`));
-    } else {
-      console.log(chalk.yellow(`WARNING: ${path.join(wpPath, 'src', status.fn)} was merged automatically`));
+
+    let targetFn = status.fn;
+    if (hasFolderChanged) {
+      const basename = path.basename(status.fn);
+      targetFn = buildLocalRelPath(status.T, status.D, basename);
+      const oldAbs = path.join(wpPath, status.fn);
+      const newAbs = path.join(wpPath, targetFn);
+      if (oldAbs !== newAbs) {
+        await fse.ensureDir(path.dirname(newAbs));
+        if (await exists(oldAbs)) await rm(oldAbs);
+        console.log(chalk.yellow(`${oldAbs} was moved to ${newAbs}`));
+      }
     }
-    await writeFile(path.join(wpPath, 'src', status.fn), result, 'UTF-8');
+
+    if (conflict) {
+      console.log(chalk.bgRed(`WARNING: ${path.join(wpPath, targetFn)} has merge conflicts`));
+    } else {
+      console.log(chalk.yellow(`WARNING: ${path.join(wpPath, targetFn)} was merged automatically`));
+    }
+    await writeFile(path.join(wpPath, targetFn), result, 'UTF-8');
+    status.fn = targetFn;
   } else if (hasIncomingChanges) {
     const newVersion = status.U || status.P;
 
     if (status.fn) {
-      console.log(chalk.green(`${path.join(wpPath, 'src', status.fn)} has changes`));
-      await writeFile(path.join(wpPath, 'src', status.fn), newVersion, 'UTF-8');
+      let targetFn = status.fn;
+      if (hasFolderChanged) {
+        const basename = path.basename(status.fn);
+        targetFn = buildLocalRelPath(status.T, status.D, basename);
+        const oldAbs = path.join(wpPath, status.fn);
+        const newAbs = path.join(wpPath, targetFn);
+        if (oldAbs !== newAbs) {
+          await fse.ensureDir(path.dirname(newAbs));
+          if (await exists(oldAbs)) await rm(oldAbs);
+          console.log(chalk.yellow(`${oldAbs} was moved to ${newAbs}`));
+        }
+      }
+      console.log(chalk.green(`${path.join(wpPath, targetFn)} has changes`));
+      await writeFile(path.join(wpPath, targetFn), newVersion, 'UTF-8');
+      status.fn = targetFn;
     } else {
-      // new File
-      const folder = getTypeFolder(status.T);
-      const baseName = importWorkspace.formatName(status.N);
-      const ext = status.T === CaType.AI_FUNCTION ? 'ts' : 'js';
-      await fse.ensureDir(path.join(wpPath, 'src', folder));
-      const basename = await importWorkspace.getName(path.join(wpPath, 'src', folder), baseName, ext);
-      const newFileName = `${folder}/${basename}`;
-
-      await writeFile(path.join(wpPath, 'src', newFileName), newVersion, 'UTF-8');
+      // CA was tracked in .bmc but the local file was missing — re-create it.
+      const newFileName = await createNewFile(wpPath, status, newVersion);
       status.fn = newFileName;
-      console.log(chalk.green(`${path.join(wpPath, 'src', status.fn)} was added`));
+      console.log(chalk.green(`${path.join(wpPath, status.fn)} was added`));
     }
+  } else if (hasFolderChanged) {
+    const basename = path.basename(status.fn);
+    const targetFn = buildLocalRelPath(status.T, status.D, basename);
+    const oldAbs = path.join(wpPath, status.fn);
+    const newAbs = path.join(wpPath, targetFn);
+    if (oldAbs !== newAbs) {
+      await moveLocalFile(wpPath, status.fn, targetFn);
+      console.log(chalk.yellow(`${oldAbs} was moved to ${newAbs}`));
+    }
+    status.fn = targetFn;
   } else if (wasAdded) {
     const newVersion = status.U || status.P;
-    // new File
-    const folder = getTypeFolder(status.T);
-    const baseName = importWorkspace.formatName(status.N);
-    const ext = status.T === CaType.AI_FUNCTION ? 'ts' : 'js';
-    await fse.ensureDir(path.join(wpPath, 'src', folder));
-    const basename = await importWorkspace.getName(path.join(wpPath, 'src', folder), baseName, ext);
-    const newFileName = `${folder}/${basename}`;
-
-    await writeFile(path.join(wpPath, 'src', newFileName), newVersion, 'UTF-8');
-    console.log(chalk.green(`${path.join(wpPath, 'src', newFileName)} was added`));
+    const newFileName = await createNewFile(wpPath, status, newVersion);
+    console.log(chalk.green(`${path.join(wpPath, newFileName)} was added`));
     return cas.concat({
       publishedCode: status.P,
       unPublishedCode: status.U,
@@ -89,6 +143,7 @@ const makeChanges = async (wpPath, cas, status, changes) => {
       type: status.T,
       id: status.id,
       filename: newFileName,
+      folder: status.D || '',
     })
   }
 
@@ -99,6 +154,7 @@ const makeChanges = async (wpPath, cas, status, changes) => {
     type: status.T,
     id: status.id,
     filename: status.fn,
+    folder: status.D || '',
   });
 }
 

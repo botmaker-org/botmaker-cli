@@ -4,7 +4,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { getAllCas, getCustomerContext } = require('./bmService')
 const CaType = require('./caTypes');
-const { getTypeFolder } = require('./caTypes');
+const { getTypeFolder, buildLocalRelPath } = require('./caTypes');
 const fse = require('fs-extra');
 
 const readFile = util.promisify(fs.readFile);
@@ -77,14 +77,19 @@ const importWorkspace = async (pwd, apiToken) => {
   const baseTemplate = path.join(bmcPath, 'workspaceTemplate');
   await copyAll(baseTemplate, workspacePath);
   await writeFile(path.join(workspacePath, "context.json"), JSON.stringify(context, null, 4), "UTF-8");
-  const srcFolder = path.join(workspacePath, "src");
   for (const ca of cas) {
-    const folder = getTypeFolder(ca.type);
+    const remoteFolder = ca.folder || '';
     const baseName = formatName(ca.name);
     const ext = ca.type === CaType.AI_FUNCTION ? 'ts' : 'js';
-    const basename = await getName(path.join(srcFolder, folder), baseName, ext);
-    ca.filename = `${folder}/${basename}`;
-    await writeFile(path.join(srcFolder, ca.filename), ca.unPublishedCode || ca.publishedCode, "UTF-8");
+    const typeFolder = getTypeFolder(ca.type);
+    const targetDir = typeFolder
+      ? path.join(workspacePath, 'src', typeFolder, remoteFolder)
+      : path.join(workspacePath, remoteFolder);
+    await fse.ensureDir(targetDir);
+    const basename = await getName(targetDir, baseName, ext);
+    ca.filename = buildLocalRelPath(ca.type, remoteFolder, basename);
+    ca.folder = remoteFolder;
+    await writeFile(path.join(workspacePath, ca.filename), ca.unPublishedCode || ca.publishedCode, "UTF-8");
   }
   const bmc = {
     cas,
