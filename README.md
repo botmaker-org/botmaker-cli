@@ -22,6 +22,7 @@
 | `bmc status [name]` | `bmc s` | Show change status |
 | `bmc diff <name> <code>` | `bmc d` | Diff local vs remote |
 | `bmc rename <name> <newName>` | | Rename a client action |
+| `bmc reset` | | Reset local flow state files |
 
 ### `bmc new` flags
 
@@ -37,9 +38,9 @@
 
 ## Running WhatsApp Flow and Webchat Form CAs locally
 
-WHATSAPP_FLOW and WEBCHAT_FORM client actions are driven by a JSON payload that simulates what WhatsApp / Webchat sends to the endpoint. Edit **`testdata.json`** in your workspace root before running.
+WHATSAPP_FLOW and WEBCHAT_FORM client actions are driven by a JSON payload that simulates what WhatsApp / Webchat sends to the endpoint. The runner reads from **`flowstate.json`** in your workspace root and automatically updates it after each run.
 
-### testdata.json
+### flowstate.json
 
 ```json
 {
@@ -67,18 +68,30 @@ The runner prints:
 - `→ flow finished (SUCCESS)` — no nextScreen set, flow/form ends
 - `→ data: { ... }` — the data passed to the next screen (or back to Botmaker variables on the last screen)
 
+After each successful run, `flowstate.json` is automatically updated so the next `bmc run` picks up where the flow left off. When the flow finishes (no `nextScreen`), it resets to `INIT` automatically.
+
 ### Testing multi-screen flows
 
-WHATSAPP_FLOW and WEBCHAT_FORM CAs can call `saveScreenData()` to persist the current payload between screens, and `loadPrevScreenData()` to retrieve it in a later screen. Locally, this state is stored in `.bmc-screendata.json` in your workspace root.
+Just keep running `bmc run` — `flowstate.json` tracks the current screen automatically. To test user input for a screen, edit the `data` field in `flowstate.json` before running.
 
-To test a full multi-screen flow:
+WHATSAPP_FLOW and WEBCHAT_FORM CAs can call `saveScreenData()` to persist payload between screens and `loadPrevScreenData()` to retrieve it. Locally, this is stored in `.bmc-screendata.json` in your workspace root.
 
-1. Set `testdata.json` to `action: "INIT"`, run — note the `nextScreen` output.
-2. Set `action: "data_exchange"`, `screen` to the screen name from step 1, fill `data` with the screen's user input fields, run again.
-3. Repeat for each screen until the flow finishes.
+### Resetting local state
 
-To reset saved screen state between test runs, delete `.bmc-screendata.json`.
+```bash
+bmc reset
+```
+
+Resets `flowstate.json` to `INIT` and deletes `chat.json` and `catalog.json` so they are re-fetched from the live API on the next run.
 
 ### botmakerAPI in local runs
 
-`botmakerAPI.getChat()`, `updateChat()`, and `getProducts()` make real HTTP calls to the Botmaker API using your workspace token. Set `botmakerAPI.ACCESS_TOKEN` in your CA code if you need to use a different token (e.g. an Operations API token).
+`botmakerAPI` uses local files instead of making live HTTP calls on every run:
+
+| Method | Local behaviour |
+|--------|----------------|
+| `getChat()` | Reads from `chat.json`. If missing, fetches once from the live API and saves it. |
+| `updateChat(update)` | Merges changes into `chat.json` locally — never calls the API. |
+| `getProducts(catalogId, skus)` | Reads from `catalog.json` (keyed by `catalogId`). If the catalog is missing, fetches once from the live API and saves it. |
+
+To force a fresh fetch from the API, run `bmc reset` or delete the relevant file manually.
