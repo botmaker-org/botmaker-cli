@@ -247,9 +247,9 @@ const runFlowOrFormCa = async (wpPath, token, cas, ca) => {
   const context = JSON.parse(contextJson);
 
   let testData = {};
-  const testDataPath = path.join(wpPath, 'testdata.json');
-  if (await exists(testDataPath)) {
-    testData = JSON.parse(await readFile(testDataPath, 'utf8'));
+  const flowStatePath = path.join(wpPath, 'flowstate.json');
+  if (await exists(flowStatePath)) {
+    testData = JSON.parse(await readFile(flowStatePath, 'utf8'));
   }
 
   const action = testData.action || 'INIT';
