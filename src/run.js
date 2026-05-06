@@ -11,6 +11,7 @@ const { getBmc } = require('./bmcConfig');
 const express = require('express');
 const { getCaByNameOrPath } = require('./getStatus');
 const caEndpointRunner = require('./caEndpointRunner');
+const caFlowFormRunner = require('./caFlowFormRunner');
 const CaType = require('./caTypes');
 const { Project, ts } = require('ts-morph');
 
@@ -240,6 +241,46 @@ const runAiFunctionCa = async (wpPath, token, cas, ca, vars, params, volatile) =
   process.exit(0);
 };
 
+const runFlowOrFormCa = async (wpPath, token, cas, ca) => {
+  const { code, helpers, filePath } = await getCodeAnHelpers(wpPath, cas, ca);
+  const contextJson = await readFile(path.join(wpPath, 'context.json'), 'utf8');
+  const context = JSON.parse(contextJson);
+
+  let testData = {};
+  const testDataPath = path.join(wpPath, 'testdata.json');
+  if (await exists(testDataPath)) {
+    testData = JSON.parse(await readFile(testDataPath, 'utf8'));
+  }
+
+  const action = testData.action || 'INIT';
+  const screen = testData.screen || '';
+  const data = testData.data || {};
+  const responseVar = ca.type === CaType.WHATSAPP_FLOW ? 'flow' : 'form';
+
+  console.log(chalk.yellow(`Running ${ca.type} CA: ${ca.name}`));
+  console.log(chalk.yellow(`action=${action}${screen ? `, screen=${screen}` : ''}`));
+
+  const startTime = new Date().getTime();
+  const result = await caFlowFormRunner({ code, filePath, helpers, token, wpPath, context, action, screen, data, responseVar });
+  const endTime = new Date().getTime() - startTime;
+
+  if (result.error) {
+    console.error(chalk.red(` ❌ Fail in ${endTime}ms`));
+    console.error(chalk.red(result.stack || result.error));
+  } else {
+    console.log(chalk.green(` ✓ Success in ${endTime}ms`));
+    if (result.nextScreen) {
+      console.log(chalk.cyan(` → nextScreen: ${result.nextScreen}`));
+    } else {
+      console.log(chalk.cyan(' → flow finished (SUCCESS)'));
+    }
+    if (result.data && Object.keys(result.data).length > 0) {
+      console.log(chalk.cyan(' → data:'), JSON.stringify(result.data, null, 2));
+    }
+  }
+  process.exit(0);
+};
+
 const run = async (pwd, file, { vars, params, volatile, endpoint, port = 7070 }) => {
   const wpPath = await getWorkspacePath(pwd);
   const { token, cas } = await getBmc(wpPath);
@@ -251,6 +292,8 @@ const run = async (pwd, file, { vars, params, volatile, endpoint, port = 7070 })
     await runAiFunctionCa(wpPath, token, cas, ca, vars, params, volatile);
   } else if (type === CaType.ENDPOINT || type === 'SCHEDULE') {
     await runEndpointCa(wpPath, token, cas, ca, port);
+  } else if (type === CaType.WHATSAPP_FLOW || type === CaType.WEBCHAT_FORM) {
+    await runFlowOrFormCa(wpPath, token, cas, ca);
   } else {
     throw new Error(`'${type}' invalid client action type.`);
   }
