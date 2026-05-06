@@ -56,7 +56,7 @@ module.exports = ({ code, filePath, helpers, token, wpPath, context, action, scr
     });
 
     // chatReference for botmakerAPI live calls — pulled from context if present
-    const chatReference = (context && (context.chatPlatformId || context.chatReference || context.id)) || 'local-test';
+    const chatReference = (context && context.userData && context.userData._id_) || 'local-test';
 
     // botmakerAPI — uses ACCESS_TOKEN if set by CA code, falls back to workspace token
     const botmakerAPI = {
