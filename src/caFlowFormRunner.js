@@ -81,6 +81,7 @@ module.exports = ({ code, filePath, helpers, token, wpPath, context, action, scr
         const merged = { ...chat, ...update };
         if (update.variables) merged.variables = { ...(chat.variables || {}), ...update.variables };
         fs.writeFileSync(chatFilePath, JSON.stringify(merged, null, 2), 'utf8');
+        return merged;
       },
       getProducts: async (catalogId, skus) => {
         let catalog = {};
