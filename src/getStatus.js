@@ -164,6 +164,8 @@ const ROOT_SCAN_EXCLUDES = new Set([
   'README.md', 'node_modules', '.vscode', '.git', '.gitignore',
 ]);
 
+const SRC_SCAN_EXCLUDES = new Set(['jsconfig.json', 'tsconfig.json']);
+
 const findFileByBasename = async (rootPath, basename) => {
   const matches = [];
   if (!(await exists(rootPath))) return matches;
@@ -201,7 +203,7 @@ async function* walkAllLocalCaFiles(wpPath, cas) {
   for (const folder of TYPE_FOLDERS) {
     const folderPath = path.join(wpPath, 'src', folder);
     if (await exists(folderPath)) {
-      yield* walkRel(folderPath, `src/${folder}`);
+      yield* walkRel(folderPath, `src/${folder}`, SRC_SCAN_EXCLUDES);
     }
   }
   // Workspace-root scan only when an unmapped-type CA already exists,
