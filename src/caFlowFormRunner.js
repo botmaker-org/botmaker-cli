@@ -12,10 +12,17 @@ const crypto = require('crypto');
 const bluebird = require('bluebird');
 const chalk = require('chalk');
 
-const cloneGlobal = () => Object.defineProperties(
-  { ...global },
-  Object.getOwnPropertyDescriptors(global)
-);
+const cloneGlobal = () => {
+  const descriptors = Object.getOwnPropertyDescriptors(global);
+  for (const key of Object.keys(descriptors)) {
+    const d = descriptors[key];
+    if (d.get && !d.set) {
+      // getter-only accessor (e.g. globalThis.crypto in Node 19+) — convert to writable data property
+      descriptors[key] = { value: d.get.call(global), writable: true, enumerable: d.enumerable, configurable: true };
+    }
+  }
+  return Object.defineProperties({}, descriptors);
+};
 
 /**
  * @param {object} opts
@@ -27,7 +34,7 @@ const cloneGlobal = () => Object.defineProperties(
  * @param {object} opts.context    - parsed context.json
  * @param {string} opts.action     - 'INIT' | 'data_exchange' | 'BACK'
  * @param {string} opts.screen     - name of the screen being left
- * @param {object} opts.data       - payload from testdata.json
+ * @param {object} opts.data       - payload from flowstate.json
  * @param {string} opts.responseVar - 'flow' (WHATSAPP_FLOW) or 'form' (WEBCHAT_FORM)
  * @returns {Promise<{nextScreen?: string, data?: object, error?: string, stack?: string}>}
  */
