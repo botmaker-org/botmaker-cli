@@ -58,20 +58,44 @@ module.exports = ({ code, filePath, helpers, token, wpPath, context, action, scr
     // chatReference for botmakerAPI live calls — pulled from context if present
     const chatReference = (context && context.userData && context.userData._id_) || 'local-test';
 
-    // botmakerAPI — uses ACCESS_TOKEN if set by CA code, falls back to workspace token
+    // botmakerAPI — reads/writes local files; seeds from live API on first call
+    const chatFilePath = path.join(wpPath, 'chat.json');
+    const catalogFilePath = path.join(wpPath, 'catalog.json');
+
     const botmakerAPI = {
       ACCESS_TOKEN: '',
-      getChat: () => {
+      getChat: async () => {
+        if (fs.existsSync(chatFilePath)) {
+          return JSON.parse(fs.readFileSync(chatFilePath, 'utf8'));
+        }
         const t = botmakerAPI.ACCESS_TOKEN || token;
-        return rp({ uri: `https://api.botmaker.com/v2.0/chats/${chatReference}`, headers: { 'access-token': t }, json: true });
+        const chat = await rp({ uri: `https://api.botmaker.com/v2.0/chats/${chatReference}`, headers: { 'access-token': t }, json: true });
+        fs.writeFileSync(chatFilePath, JSON.stringify(chat, null, 2), 'utf8');
+        return chat;
       },
-      updateChat: (update) => {
-        const t = botmakerAPI.ACCESS_TOKEN || token;
-        return rp({ method: 'PUT', uri: `https://api.botmaker.com/v2.0/chats/${chatReference}`, headers: { 'access-token': t }, body: update, json: true });
+      updateChat: async (update) => {
+        let chat = {};
+        if (fs.existsSync(chatFilePath)) {
+          chat = JSON.parse(fs.readFileSync(chatFilePath, 'utf8'));
+        }
+        const merged = { ...chat, ...update };
+        if (update.variables) merged.variables = { ...(chat.variables || {}), ...update.variables };
+        fs.writeFileSync(chatFilePath, JSON.stringify(merged, null, 2), 'utf8');
       },
-      getProducts: (catalogId, skus) => {
-        const t = botmakerAPI.ACCESS_TOKEN || token;
-        return rp({ uri: `https://api.botmaker.com/v2.0/ecommerce/catalogs/${catalogId}/products`, headers: { 'access-token': t }, qs: { skus: skus.join(',') }, json: true });
+      getProducts: async (catalogId, skus) => {
+        let catalog = {};
+        if (fs.existsSync(catalogFilePath)) {
+          catalog = JSON.parse(fs.readFileSync(catalogFilePath, 'utf8'));
+        }
+        if (!catalog[catalogId]) {
+          const t = botmakerAPI.ACCESS_TOKEN || token;
+          const result = await rp({ uri: `https://api.botmaker.com/v2.0/ecommerce/catalogs/${catalogId}/products`, headers: { 'access-token': t }, json: true });
+          catalog[catalogId] = result;
+          fs.writeFileSync(catalogFilePath, JSON.stringify(catalog, null, 2), 'utf8');
+        }
+        const products = catalog[catalogId] || [];
+        if (!skus || skus.length === 0) return products;
+        return products.filter(p => skus.includes(p.retailerId) || skus.includes(p.id));
       },
     };
 
