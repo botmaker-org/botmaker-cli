@@ -277,6 +277,10 @@ const runFlowOrFormCa = async (wpPath, token, cas, ca) => {
     if (result.data && Object.keys(result.data).length > 0) {
       console.log(chalk.cyan(' → data:'), JSON.stringify(result.data, null, 2));
     }
+    const newFlowState = result.nextScreen
+      ? { action: 'data_exchange', screen: result.nextScreen, data: result.data || {} }
+      : { action: 'INIT', screen: '', data: {} };
+    await writeFile(flowStatePath, JSON.stringify(newFlowState, null, 2), 'utf-8');
   }
   process.exit(0);
 };
