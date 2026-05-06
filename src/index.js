@@ -9,6 +9,7 @@ const setCustomer = require('./setCustomer');
 const getStatus = require('./getStatus');
 const publish = require('./publish');
 const rename = require('./rename');
+const reset = require('./reset');
 const listCas = require('./listCas');
 const CaType = require('./caTypes');
 
@@ -95,6 +96,10 @@ const main = async (args) => {
       ['rename <caName> <newName>'],
       'Renames the given client action'
     )
+    .command(
+      ['reset'],
+      'Reset local flow state (flowstate.json, chat.json, catalog.json)',
+    )
     .demandCommand()
     .help('h')
     .alias('h', 'help')
@@ -147,6 +152,9 @@ const main = async (args) => {
     case "rename":
       const { caName: caName6, newName} = arrgs;
       await rename(pwd, caName6, newName);
+      break;
+    case "reset":
+      await reset(pwd);
       break;
     case "run":
     case "r":
