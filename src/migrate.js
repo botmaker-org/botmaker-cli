@@ -18,6 +18,7 @@ const TEMPLATE_FILES = [
   'src/mcp/tsconfig.json',
   'src/webchatforms/jsconfig.json',
   'src/whatsappflow/jsconfig.json',
+  'src/schedule/jsconfig.json',
 ];
 
 const isAlreadyMigrated = (cas) => {
@@ -82,10 +83,17 @@ const migrate = async (pwd) => {
     if (ca.filename && ca.filename !== newFilename) {
       const oldAbs = path.join(wpPath, ca.filename);
       const newAbs = path.join(wpPath, newFilename);
+      const fallbackAbs = path.join(wpPath, 'src', path.basename(ca.filename));
+      let actualOldAbs = null;
       if (await fse.pathExists(oldAbs)) {
+        actualOldAbs = oldAbs;
+      } else if (await fse.pathExists(fallbackAbs)) {
+        actualOldAbs = fallbackAbs;
+      }
+      if (actualOldAbs) {
         await fse.ensureDir(path.dirname(newAbs));
-        await rename(oldAbs, newAbs);
-        console.log(chalk.green(`  ${ca.filename} → ${newFilename}`));
+        await rename(actualOldAbs, newAbs);
+        console.log(chalk.green(`  ${path.relative(wpPath, actualOldAbs)} → ${newFilename}`));
       } else {
         console.log(chalk.yellow(`  WARNING: '${ca.filename}' not found on disk, updating .bmc path only`));
       }
