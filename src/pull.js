@@ -28,16 +28,17 @@ const confirm = (question) => new Promise((resolve) => {
   });
 });
 
-const checkMigration = async (cas, pwd) => {
-  if (isAlreadyMigrated(cas)) return true;
+const checkMigration = async (cas, pwd, wpPath) => {
+  if (isAlreadyMigrated(cas)) return cas;
   console.log(chalk.yellow('Workspace is not migrated to the new structure.'));
   const ok = await confirm('Do you want to migrate now? [y/N] ');
   if (!ok) {
     console.log('Pull aborted.');
-    return false;
+    return null;
   }
   await migrate(pwd);
-  return true;
+  const { cas: freshCas } = await getBmc(wpPath);
+  return freshCas;
 };
 
 const targetDirForNew = (wpPath, type, folder) => {
@@ -189,8 +190,9 @@ const hasMerge = (changes) => {
 
 const singlePull = async (pwd, caName) => {
   const wpPath = await getWorkspacePath(pwd)
-  const { token, cas } = await getBmc(wpPath);
-  if (!await checkMigration(cas, pwd)) return false;
+  const { token, cas: rawCas } = await getBmc(wpPath);
+  const cas = await checkMigration(rawCas, pwd, wpPath);
+  if (cas === null) return false;
   const { changes, status } = await getStatus.getSingleStatusChanges(pwd, caName);
   const newCas = await makeChanges(wpPath, cas, status, changes);
   if(newCas === cas) {
@@ -203,8 +205,9 @@ const singlePull = async (pwd, caName) => {
 
 const completePull = async (pwd) => {
   const wpPath = await getWorkspacePath(pwd)
-  const { token, cas } = await getBmc(wpPath);
-  if (!await checkMigration(cas, pwd)) return false;
+  const { token, cas: rawCas } = await getBmc(wpPath);
+  const cas = await checkMigration(rawCas, pwd, wpPath);
+  if (cas === null) return false;
   const changesGenerator = getStatus.getStatusChanges(pwd);
   let newCas = cas;
   let withMerges = false;
