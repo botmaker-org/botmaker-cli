@@ -17,6 +17,30 @@ const rm = util.promisify(fs.unlink);
 const renameFile = util.promisify(fs.rename);
 const exists = util.promisify(fs.exists);
 
+const readline = require('readline');
+const migrate = require('./migrate');
+const { isAlreadyMigrated } = migrate;
+
+const confirm = (question) => new Promise((resolve) => {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  rl.question(question, (answer) => {
+    rl.close();
+    resolve(answer.trim().toLowerCase() === 'y');
+  });
+});
+
+const checkMigration = async (wpPath, cas, pwd) => {
+  if (isAlreadyMigrated(cas)) return true;
+  console.log(chalk.yellow('Workspace is not migrated to the new structure.'));
+  const ok = await confirm('Do you want to migrate now? [y/N] ');
+  if (!ok) {
+    console.log('Pull aborted.');
+    return false;
+  }
+  await migrate(pwd);
+  return true;
+};
+
 const targetDirForNew = (wpPath, type, folder) => {
   const typeFolder = getTypeFolder(type);
   return typeFolder
@@ -167,6 +191,7 @@ const hasMerge = (changes) => {
 const singlePull = async (pwd, caName) => {
   const wpPath = await getWorkspacePath(pwd)
   const { token, cas } = await getBmc(wpPath);
+  if (!await checkMigration(wpPath, cas, pwd)) return false;
   const { changes, status } = await getStatus.getSingleStatusChanges(pwd, caName);
   const newCas = await makeChanges(wpPath, cas, status, changes);
   if(newCas === cas) {
@@ -180,6 +205,7 @@ const singlePull = async (pwd, caName) => {
 const completePull = async (pwd) => {
   const wpPath = await getWorkspacePath(pwd)
   const { token, cas } = await getBmc(wpPath);
+  if (!await checkMigration(wpPath, cas, pwd)) return false;
   const changesGenerator = getStatus.getStatusChanges(pwd);
   let newCas = cas;
   let withMerges = false;
