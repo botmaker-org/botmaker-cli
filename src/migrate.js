@@ -100,3 +100,4 @@ const migrate = async (pwd) => {
 };
 
 module.exports = migrate;
+module.exports.isAlreadyMigrated = isAlreadyMigrated;
