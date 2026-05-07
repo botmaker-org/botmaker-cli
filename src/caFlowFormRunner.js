@@ -91,10 +91,11 @@ module.exports = ({ code, filePath, helpers, token, wpPath, context, action, scr
         if (!catalog[catalogId]) {
           const t = botmakerAPI.ACCESS_TOKEN || token;
           const result = await rp({ uri: `https://api.botmaker.com/v2.0/ecommerce/catalogs/${catalogId}/products`, headers: { 'access-token': t }, json: true });
-          catalog[catalogId] = result;
+          catalog[catalogId] = result.items || result;
           fs.writeFileSync(catalogFilePath, JSON.stringify(catalog, null, 2), 'utf8');
         }
-        const products = catalog[catalogId] || [];
+        const raw = catalog[catalogId];
+        const products = Array.isArray(raw) ? raw : (raw && raw.items) || [];
         if (!skus || skus.length === 0) return products;
         return products.filter(p => skus.includes(p.retailerId) || skus.includes(p.id));
       },
