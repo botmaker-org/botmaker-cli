@@ -1,6 +1,5 @@
 const path = require('path');
-const util = require('util');
-const fs = require('fs');
+const { rename } = require('fs').promises;
 const fse = require('fs-extra');
 const chalk = require('chalk');
 
@@ -8,9 +7,6 @@ const { getBmc, saveBmc } = require('./bmcConfig');
 const getWorkspacePath = require('./getWorkspacePath');
 const { getAllCas } = require('./bmService');
 const { buildLocalRelPath, TYPE_FOLDERS } = require('./caTypes');
-
-const rename = util.promisify(fs.rename);
-const exists = util.promisify(fs.exists);
 
 const TEMPLATE_FILES = [
   'endpoint.d.ts',
@@ -35,7 +31,7 @@ const syncTemplateFiles = async (wpPath) => {
   const templatePath = path.join(__dirname, '..', 'workspaceTemplate');
   for (const relFile of TEMPLATE_FILES) {
     const dest = path.join(wpPath, relFile);
-    if (!(await exists(dest))) {
+    if (!(await fse.pathExists(dest))) {
       await fse.ensureDir(path.dirname(dest));
       await fse.copy(path.join(templatePath, relFile), dest);
       console.log(chalk.green(`  added ${relFile}`));
@@ -43,8 +39,8 @@ const syncTemplateFiles = async (wpPath) => {
   }
   const flowstateDest = path.join(wpPath, 'flowstate.json');
   const testdataSrc = path.join(wpPath, 'testdata.json');
-  if (!(await exists(flowstateDest))) {
-    if (await exists(testdataSrc)) {
+  if (!(await fse.pathExists(flowstateDest))) {
+    if (await fse.pathExists(testdataSrc)) {
       await rename(testdataSrc, flowstateDest);
       console.log(chalk.yellow(`  renamed testdata.json → flowstate.json`));
     } else {
@@ -86,11 +82,9 @@ const migrate = async (pwd) => {
     if (ca.filename && ca.filename !== newFilename) {
       const oldAbs = path.join(wpPath, ca.filename);
       const newAbs = path.join(wpPath, newFilename);
-      if (await exists(oldAbs)) {
-        await fse.ensureDir(path.dirname(newAbs));
-        await rename(oldAbs, newAbs);
-        console.log(chalk.green(`  ${ca.filename} → ${newFilename}`));
-      }
+      await fse.ensureDir(path.dirname(newAbs));
+      await rename(oldAbs, newAbs);
+      console.log(chalk.green(`  ${ca.filename} → ${newFilename}`));
     }
 
     newCas.push({ ...ca, type, folder, filename: newFilename });
