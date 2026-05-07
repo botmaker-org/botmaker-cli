@@ -11,15 +11,14 @@ const importWorkspace = require("./importWorkspace");
 const CaType = require('./caTypes');
 const { getTypeFolder, buildLocalRelPath } = require('./caTypes');
 const fse = require('fs-extra');
+const readline = require('readline');
+const migrate = require('./migrate');
+const { isAlreadyMigrated } = migrate;
 
 const writeFile = util.promisify(fs.writeFile);
 const rm = util.promisify(fs.unlink);
 const renameFile = util.promisify(fs.rename);
 const exists = util.promisify(fs.exists);
-
-const readline = require('readline');
-const migrate = require('./migrate');
-const { isAlreadyMigrated } = migrate;
 
 const confirm = (question) => new Promise((resolve) => {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -29,7 +28,7 @@ const confirm = (question) => new Promise((resolve) => {
   });
 });
 
-const checkMigration = async (wpPath, cas, pwd) => {
+const checkMigration = async (cas, pwd) => {
   if (isAlreadyMigrated(cas)) return true;
   console.log(chalk.yellow('Workspace is not migrated to the new structure.'));
   const ok = await confirm('Do you want to migrate now? [y/N] ');
@@ -191,7 +190,7 @@ const hasMerge = (changes) => {
 const singlePull = async (pwd, caName) => {
   const wpPath = await getWorkspacePath(pwd)
   const { token, cas } = await getBmc(wpPath);
-  if (!await checkMigration(wpPath, cas, pwd)) return false;
+  if (!await checkMigration(cas, pwd)) return false;
   const { changes, status } = await getStatus.getSingleStatusChanges(pwd, caName);
   const newCas = await makeChanges(wpPath, cas, status, changes);
   if(newCas === cas) {
@@ -205,7 +204,7 @@ const singlePull = async (pwd, caName) => {
 const completePull = async (pwd) => {
   const wpPath = await getWorkspacePath(pwd)
   const { token, cas } = await getBmc(wpPath);
-  if (!await checkMigration(wpPath, cas, pwd)) return false;
+  if (!await checkMigration(cas, pwd)) return false;
   const changesGenerator = getStatus.getStatusChanges(pwd);
   let newCas = cas;
   let withMerges = false;

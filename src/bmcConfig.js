@@ -24,9 +24,7 @@ const migrateCa = (ca) => {
 exports.getBmc = async (wpPath) => {
   const bmc = await readFile(path.join(wpPath, '.bmc'), 'UTF-8');
   const parsed = JSON.parse(bmc);
-  if (Array.isArray(parsed.cas)) {
-    parsed.cas = parsed.cas.map(migrateCa);
-  }
+  parsed.cas = Array.isArray(parsed.cas) ? parsed.cas.map(migrateCa) : [];
   return parsed;
 }
 
