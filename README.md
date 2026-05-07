@@ -1,12 +1,6 @@
 ## How to install botmaker-cli
 - Run `npm i -g @botmaker.org/botmaker-cli`
 
-#### Problems on windows?  
-- Failed `node-gyp` rebuild and/or `python 2.7` issue  
-    - Try running `npm install --global windows-build-tools` on Windows Powershell as Administrator  
-    - Create `PYTHON` environment variable and set `C:\Users\YOUR_USER\.windows-build-tools\python27\python.exe` directory  
-    - Run `bmc` on bash command-line
-
 ---
 
 ## Commands
@@ -33,6 +27,67 @@
 | `-a` / `--ai-function` | AI/MCP function (TypeScript) | `src/mcp/` |
 | `-w` / `--whatsapp-flow` | WhatsApp Flow endpoint | `src/whatsappflow/` |
 | `-f` / `--webchat-form` | Webchat Form endpoint | `src/webchatforms/` |
+
+---
+
+## Running MCP / AI Function CAs locally
+
+MCP CAs are TypeScript files in `src/mcp/` that export a default async function. The runner compiles the TypeScript, infers parameter names from the function signature, and calls the function with the values you supply via `-p`.
+
+### Running
+
+```bash
+bmc run src/mcp/myFunction.ts
+```
+
+### Passing parameters
+
+Use `-p <paramName> <paramValue>` for each parameter. Parameter names must match the function's TypeScript parameter names:
+
+```bash
+bmc run src/mcp/myFunction.ts -p city "New York" -p units "metric"
+```
+
+Multiple `-p` flags are supported. Parameter values are always passed as strings — cast inside the function if needed.
+
+### Setting user variables
+
+Use `-v <varName> <varValue>` to inject values into `User.get()` / `User.set()` context:
+
+```bash
+bmc run src/mcp/myFunction.ts -p query "hello" -v userId "abc123"
+```
+
+### Example CA
+
+```typescript
+/**
+ * Looks up weather for a city
+ * @param city - City name to query
+ * @param units - Temperature units: "metric" or "imperial"
+ */
+export default async function getWeather(city: string, units: string) {
+  return { city, units, temperature: 22 };
+}
+```
+
+The output is printed as formatted JSON:
+
+```json
+{
+  "city": "New York",
+  "units": "metric",
+  "temperature": 22
+}
+```
+
+### Flags
+
+| Flag | Description |
+|---|---|
+| `-p <name> <value>` | Pass a named parameter to the function |
+| `-v <name> <value>` | Set a user variable accessible via `User.get()` |
+| `--volatile` | Skip persisting state to `context.json` after the run |
 
 ---
 

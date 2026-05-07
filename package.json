@@ -37,8 +37,7 @@
     "request": "^2.88.2",
     "request-promise": "^4.2.5",
     "secure-random": "^1.1.1",
-    "sharp": "^0.32.1",
-    "ts-morph": "^27.0.2",
+"ts-morph": "^27.0.2",
     "xml2js": "^0.6.2",
     "xml2json": "^0.12.0",
     "yargs": "^16.2.0"
