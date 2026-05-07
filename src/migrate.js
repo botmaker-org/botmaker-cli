@@ -82,9 +82,13 @@ const migrate = async (pwd) => {
     if (ca.filename && ca.filename !== newFilename) {
       const oldAbs = path.join(wpPath, ca.filename);
       const newAbs = path.join(wpPath, newFilename);
-      await fse.ensureDir(path.dirname(newAbs));
-      await rename(oldAbs, newAbs);
-      console.log(chalk.green(`  ${ca.filename} → ${newFilename}`));
+      if (await fse.pathExists(oldAbs)) {
+        await fse.ensureDir(path.dirname(newAbs));
+        await rename(oldAbs, newAbs);
+        console.log(chalk.green(`  ${ca.filename} → ${newFilename}`));
+      } else {
+        console.log(chalk.yellow(`  WARNING: '${ca.filename}' not found on disk, updating .bmc path only`));
+      }
     }
 
     newCas.push({ ...ca, type, folder, filename: newFilename });
