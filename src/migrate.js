@@ -79,7 +79,9 @@ const migrate = async (pwd) => {
     const type = remote.type;
     const folder = remote.folder || '';
     const basename = path.basename(ca.filename || '');
-    const newFilename = buildLocalRelPath(type, folder, basename);
+    const newFilename = basename
+      ? buildLocalRelPath(type, folder, basename)
+      : ca.filename;
 
     if (ca.filename && ca.filename !== newFilename) {
       const oldAbs = path.join(wpPath, ca.filename);
