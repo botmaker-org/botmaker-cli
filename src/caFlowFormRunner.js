@@ -97,7 +97,7 @@ module.exports = ({ code, filePath, helpers, token, wpPath, context, action, scr
         const raw = catalog[catalogId];
         const products = Array.isArray(raw) ? raw : (raw && raw.items) || [];
         if (!skus || skus.length === 0) return products;
-        return products.filter(p => skus.includes(p.retailerId) || skus.includes(p.id));
+        return products.filter(p => skus.includes(p.sku) || skus.includes(p.retailerId) || skus.includes(p.id));
       },
     };
 
