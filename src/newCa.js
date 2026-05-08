@@ -11,6 +11,7 @@ const { getBmc, saveBmc } = require('./bmcConfig');
 const getWorkspacePath = require('./getWorkspacePath');
 const importWorkspace = require("./importWorkspace");
 const { createCa } = require("./bmService");
+const { isValidCron } = require('cron-validator');
 
 const writeFile = util.promisify(fs.writeFile);
 
@@ -86,6 +87,20 @@ const baseWebchatFormCa = fs.readFileSync(
   'utf8',
 );
 
+const baseScheduleCa =
+`const main = async () => {
+  // TODO your scheduled code here
+};
+
+main()
+  .catch(err => {
+    bmconsole.error(\`[ERROR]: \${err.message}\`);
+  })
+  .finally(() => {
+    result.done();
+  });
+`;
+
 const createFileAndStatus = async (wpPath, ca, type, openVsCode) => {
   const remoteFolder = ca.folder || '';
   const baseName = importWorkspace.formatName(ca.name);
@@ -111,22 +126,29 @@ const createFileAndStatus = async (wpPath, ca, type, openVsCode) => {
   };
 }
 
-const newCa = async (pwd, caName, type, openVsCode = false) => {
+const newCa = async (pwd, caName, type, openVsCode = false, schedule = null) => {
+  if (schedule != null) {
+    if (!isValidCron(schedule, { seconds: false })) {
+      throw new Error(`Invalid cron expression: "${schedule}". Expected a valid 5-field cron string (e.g. "0 * * * *").`);
+    }
+  }
   const templateByType = {
     [CaType.USER]: baseCa,
     [CaType.ENDPOINT]: baseEndPointCa,
     [CaType.AI_FUNCTION]: baseAiFunctionCa,
     [CaType.WHATSAPP_FLOW]: baseWhatsappFlowCa,
     [CaType.WEBCHAT_FORM]: baseWebchatFormCa,
+    [CaType.SCHEDULE]: baseScheduleCa,
   };
-  const newCa = {
+  const newCaObj = {
     publishedCode: templateByType[type] ?? baseCa,
     name: caName,
     type: type,
+    ...(schedule != null && { schedule }),
   };
   const wpPath = await getWorkspacePath(pwd);
   const { token, cas } = await getBmc(wpPath);
-  const resp = await createCa(token, newCa);
+  const resp = await createCa(token, newCaObj);
   const ca = JSON.parse(resp.body);
   const status = await createFileAndStatus(wpPath, ca, type, openVsCode);
   const newCas = cas.concat(status);
