@@ -16,6 +16,7 @@
 | `bmc status [name]` | `bmc s` | Show change status |
 | `bmc diff <name> <code>` | `bmc d` | Diff local vs remote |
 | `bmc rename <name> <newName>` | | Rename a client action |
+| `bmc set-schedule <name> <cronString>` | | Set the cron schedule on a SCHEDULE type CA |
 | `bmc reset` | | Reset local flow state files |
 
 ### `bmc new` flags
@@ -27,6 +28,7 @@
 | `-a` / `--ai-function` | AI/MCP function (TypeScript) | `src/mcp/` |
 | `-w` / `--whatsapp-flow` | WhatsApp Flow endpoint | `src/whatsappflow/` |
 | `-f` / `--webchat-form` | Webchat Form endpoint | `src/webchatforms/` |
+| `-S "0 * * * *"` / `--schedule-ca` | Scheduled task (5-field cron expression) | `src/schedule/` |
 
 ---
 
