@@ -19,7 +19,6 @@ const hasIncomingChanges = (changes) => {
     || c === ChangeType.NEW_CA
     || c === ChangeType.RENAMED
     || c === ChangeType.TYPE_CHANGED
-    || c === ChangeType.FOLDER_CHANGED
   );
 }
 

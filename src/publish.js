@@ -14,14 +14,12 @@ const hasIncomingChanges = (changes) => {
     || c === ChangeType.NEW_CA
     || c === ChangeType.RENAMED
     || c === ChangeType.TYPE_CHANGED
-    || c === ChangeType.FOLDER_CHANGED
   );
 }
 
 const hasLocalChanges = (changes) => {
   return changes.some(c =>
     c === ChangeType.LOCAL_CHANGES
-    || c === ChangeType.LOCAL_FOLDER_CHANGED
   );
 }
 

@@ -97,7 +97,7 @@ const createFileAndStatus = async (wpPath, ca, type, openVsCode) => {
   const typeFolder = getTypeFolder(type);
   const targetDir = typeFolder
     ? path.join(wpPath, 'src', typeFolder)
-    : path.join(wpPath, 'src');
+    : wpPath;
   await fse.ensureDir(targetDir);
   const basename = await importWorkspace.getName(targetDir, baseName, ext);
   const newFileName = buildLocalRelPath(type, basename);
