@@ -102,7 +102,7 @@ const main = async (args) => {
     )
     .command(
       ['reset'],
-      'Reset local flow state (flowstate.json, chat.json, catalog.json)',
+      'Reset local workspace state (chat.json, catalog.json)',
     )
     .command(
       ['migrate'],
