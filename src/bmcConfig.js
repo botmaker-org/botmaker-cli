@@ -16,8 +16,7 @@ exports.getBmc = async (wpPath) => {
       'Please re-import your workspace with `bmc import <apiToken>`.'
     );
   }
-  parsed.cas = cas;
-  return parsed;
+  return { ...parsed, cas };
 };
 
 exports.saveBmc = async (wpPath, token, cas) => {

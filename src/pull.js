@@ -166,8 +166,7 @@ const hasMerge = (changes) => {
 
 const singlePull = async (pwd, caName) => {
   const wpPath = await getWorkspacePath(pwd)
-  const { token, cas: rawCas } = await getBmc(wpPath);
-  const cas = rawCas;
+  const { token, cas } = await getBmc(wpPath);
   const { changes, status } = await getStatus.getSingleStatusChanges(pwd, caName);
   const newCas = await makeChanges(wpPath, cas, status, changes);
   if(newCas === cas) {
@@ -180,8 +179,7 @@ const singlePull = async (pwd, caName) => {
 
 const completePull = async (pwd) => {
   const wpPath = await getWorkspacePath(pwd)
-  const { token, cas: rawCas } = await getBmc(wpPath);
-  const cas = rawCas;
+  const { token, cas } = await getBmc(wpPath);
   const changesGenerator = getStatus.getStatusChanges(pwd);
   let newCas = cas;
   let withMerges = false;
