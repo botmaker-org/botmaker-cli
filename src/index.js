@@ -12,7 +12,6 @@ const rename = require('./rename');
 const reset = require('./reset');
 const listCas = require('./listCas');
 const CaType = require('./caTypes');
-const migrate = require('./migrate');
 const setSchedule = require('./setSchedule');
 
 const main = async (args) => {
@@ -104,10 +103,6 @@ const main = async (args) => {
       ['reset'],
       'Reset local workspace state (chat.json, catalog.json)',
     )
-    .command(
-      ['migrate'],
-      'Migrate workspace from a previous version to the current structure',
-    )
     .demandCommand()
     .help('h')
     .alias('h', 'help')
@@ -170,9 +165,6 @@ const main = async (args) => {
       break;
     case "reset":
       await reset(pwd);
-      break;
-    case "migrate":
-      await migrate(pwd);
       break;
     case "run":
     case "r":
