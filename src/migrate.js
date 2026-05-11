@@ -11,13 +11,9 @@ const { buildLocalRelPath, TYPE_FOLDERS } = require('./caTypes');
 const TEMPLATE_FILES = [
   'endpoint.d.ts',
   'mcp.d.ts',
-  'whatsappflow.d.ts',
-  'webchatforms.d.ts',
   'src/user/jsconfig.json',
   'src/endpoint/jsconfig.json',
   'src/mcp/tsconfig.json',
-  'src/webchatforms/jsconfig.json',
-  'src/whatsappflow/jsconfig.json',
   'src/schedule/jsconfig.json',
 ];
 
@@ -36,17 +32,6 @@ const syncTemplateFiles = async (wpPath) => {
       await fse.ensureDir(path.dirname(dest));
       await fse.copy(path.join(templatePath, relFile), dest);
       console.log(chalk.green(`  added ${relFile}`));
-    }
-  }
-  const flowstateDest = path.join(wpPath, 'flowstate.json');
-  const testdataSrc = path.join(wpPath, 'testdata.json');
-  if (!(await fse.pathExists(flowstateDest))) {
-    if (await fse.pathExists(testdataSrc)) {
-      await rename(testdataSrc, flowstateDest);
-      console.log(chalk.yellow(`  renamed testdata.json → flowstate.json`));
-    } else {
-      await fse.copy(path.join(templatePath, 'flowstate.json'), flowstateDest);
-      console.log(chalk.green(`  added flowstate.json`));
     }
   }
 };
