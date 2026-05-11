@@ -21,14 +21,12 @@ const checkClientActionLength = (text, caName) => {
 
 const getPushChanges = (status, changes) => {
   const hasLocalCode = changes.includes(ChangeType.LOCAL_CHANGES);
-  const hasLocalFolder = changes.includes(ChangeType.LOCAL_FOLDER_CHANGED);
-  if (!hasLocalCode && !hasLocalFolder) {
+  if (!hasLocalCode) {
     return;
   }
 
   const payload = { id: status.id };
   if (hasLocalCode) payload.unPublishedCode = status.f;
-  if (hasLocalFolder) payload.folder = status.g || '';
   return { payload, fn: status.fn };
 }
 
@@ -43,7 +41,6 @@ const hasIncomingChanges = (changes) => {
     || c === ChangeType.NEW_CA
     || c === ChangeType.RENAMED
     || c === ChangeType.TYPE_CHANGED
-    || c === ChangeType.FOLDER_CHANGED
   );
 }
 
@@ -52,10 +49,6 @@ const applyToCas = (cas, updates) => cas.map(ca => {
   if (!u) return ca;
   const next = { ...ca };
   if (u.payload.unPublishedCode !== undefined) next.unPublishedCode = u.payload.unPublishedCode;
-  if (u.payload.folder !== undefined) {
-    next.folder = u.payload.folder;
-    next.filename = u.fn;
-  }
   return next;
 });
 
@@ -106,7 +99,6 @@ const completePush = async (pwd) => {
     const ca = cas.find(c => c.id === update.payload.id);
     const tags = [];
     if (update.payload.unPublishedCode !== undefined) tags.push('code');
-    if (update.payload.folder !== undefined) tags.push(`folder="${update.payload.folder}"`);
     console.log(chalk.yellow(` * ${chalk.italic(update.fn)} `) + chalk.grey(`${ca.name} [${tags.join(', ')}]`))
   })
   await applyPush(token, toPush.map(t => t.payload));
