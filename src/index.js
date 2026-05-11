@@ -76,12 +76,6 @@ const main = async (args) => {
         }).option('a', {
           alias: 'ai-function',
           describe: 'Create as AI function type',
-        }).option('w', {
-          alias: 'whatsapp-flow',
-          describe: 'Create as WhatsApp flow type',
-        }).option('f', {
-          alias: 'webchat-form',
-          describe: 'Create as Webchat form type',
         }).option('S', {
           alias: 'schedule-ca',
           describe: '<cronExpression> Create as Schedule type with cron expression',
@@ -143,15 +137,13 @@ const main = async (args) => {
       break;
     case "new":
     case "n":
-      const { caName: caName3, v: vsCode1, e, a, w, f, S } = arrgs;
-      const typeFlagCount = [e, a, w, f, S].filter(Boolean).length;
+      const { caName: caName3, v: vsCode1, e, a, S } = arrgs;
+      const typeFlagCount = [e, a, S].filter(Boolean).length;
       if (typeFlagCount > 1) {
-        throw new Error('Only one type flag may be specified at a time (-e, -a, -w, -f, -S).');
+        throw new Error('Only one type flag may be specified at a time (-e, -a, -S).');
       }
       const newType = e ? CaType.ENDPOINT
         : a ? CaType.AI_FUNCTION
-        : w ? CaType.WHATSAPP_FLOW
-        : f ? CaType.WEBCHAT_FORM
         : S ? CaType.SCHEDULE
         : CaType.USER;
       await newCa(pwd, caName3, newType, vsCode1, S || null);
