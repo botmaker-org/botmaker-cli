@@ -1,8 +1,10 @@
 const https = require('https');
+const http = require('http');
 
 module.exports = ((url,urlOptions, data) => {
   return new Promise((resolve, reject) => {
-    const req = https.request(url,urlOptions,
+    const client = url.startsWith('https') ? https : http;
+    const req = client.request(url,urlOptions,
       (res) => {
         res.setEncoding('utf8');
         let body = '';

@@ -9,7 +9,11 @@ const setCustomer = require('./setCustomer');
 const getStatus = require('./getStatus');
 const publish = require('./publish');
 const rename = require('./rename');
+const reset = require('./reset');
 const listCas = require('./listCas');
+const CaType = require('./caTypes');
+const migrate = require('./migrate');
+const setSchedule = require('./setSchedule');
 
 const main = async (args) => {
   const pwd = process.cwd();
@@ -69,6 +73,19 @@ const main = async (args) => {
         }).option('e', {
           alias: 'endpoint',
           describe: 'Create as endpoint type',
+        }).option('a', {
+          alias: 'ai-function',
+          describe: 'Create as AI function type',
+        }).option('w', {
+          alias: 'whatsapp-flow',
+          describe: 'Create as WhatsApp flow type',
+        }).option('f', {
+          alias: 'webchat-form',
+          describe: 'Create as Webchat form type',
+        }).option('S', {
+          alias: 'schedule-ca',
+          describe: '<cronExpression> Create as Schedule type with cron expression',
+          nargs: 1,
         })
     ).command(
       ['push [caName]'],
@@ -84,6 +101,18 @@ const main = async (args) => {
     ).command(
       ['rename <caName> <newName>'],
       'Renames the given client action'
+    )
+    .command(
+      ['set-schedule <caName> <cronString>'],
+      'Set the cron schedule on a SCHEDULE type client action'
+    )
+    .command(
+      ['reset'],
+      'Reset local flow state (flowstate.json, chat.json, catalog.json)',
+    )
+    .command(
+      ['migrate'],
+      'Migrate workspace from a previous version to the current structure',
     )
     .demandCommand()
     .help('h')
@@ -114,8 +143,18 @@ const main = async (args) => {
       break;
     case "new":
     case "n":
-      const { caName: caName3, v: vsCode1, e } = arrgs;
-      await newCa(pwd, caName3, e ? "ENDPOINT" : "USER", vsCode1);
+      const { caName: caName3, v: vsCode1, e, a, w, f, S } = arrgs;
+      const typeFlagCount = [e, a, w, f, S].filter(Boolean).length;
+      if (typeFlagCount > 1) {
+        throw new Error('Only one type flag may be specified at a time (-e, -a, -w, -f, -S).');
+      }
+      const newType = e ? CaType.ENDPOINT
+        : a ? CaType.AI_FUNCTION
+        : w ? CaType.WHATSAPP_FLOW
+        : f ? CaType.WEBCHAT_FORM
+        : S ? CaType.SCHEDULE
+        : CaType.USER;
+      await newCa(pwd, caName3, newType, vsCode1, S || null);
       break;
     case "publish":
       const { caName: caName5 } = arrgs;
@@ -132,6 +171,16 @@ const main = async (args) => {
     case "rename":
       const { caName: caName6, newName} = arrgs;
       await rename(pwd, caName6, newName);
+      break;
+    case "set-schedule":
+      const { caName: caName7, cronString } = arrgs;
+      await setSchedule(pwd, caName7, cronString);
+      break;
+    case "reset":
+      await reset(pwd);
+      break;
+    case "migrate":
+      await migrate(pwd);
       break;
     case "run":
     case "r":
