@@ -11,35 +11,11 @@ const importWorkspace = require("./importWorkspace");
 const CaType = require('./caTypes');
 const { getTypeFolder, buildLocalRelPath } = require('./caTypes');
 const fse = require('fs-extra');
-const readline = require('readline');
-const migrate = require('./migrate');
-const { isAlreadyMigrated } = migrate;
 
 const writeFile = util.promisify(fs.writeFile);
 const rm = util.promisify(fs.unlink);
 const renameFile = util.promisify(fs.rename);
 const exists = util.promisify(fs.exists);
-
-const confirm = (question) => new Promise((resolve) => {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  rl.question(question, (answer) => {
-    rl.close();
-    resolve(answer.trim().toLowerCase() === 'y');
-  });
-});
-
-const checkMigration = async (cas, pwd, wpPath) => {
-  if (isAlreadyMigrated(cas)) return cas;
-  console.log(chalk.yellow('Workspace is not migrated to the new structure.'));
-  const ok = await confirm('Do you want to migrate now? [y/N] ');
-  if (!ok) {
-    console.log('Pull aborted.');
-    return null;
-  }
-  await migrate(pwd);
-  const { cas: freshCas } = await getBmc(wpPath);
-  return freshCas;
-};
 
 const targetDirForNew = (wpPath, type, folder) => {
   const typeFolder = getTypeFolder(type);
@@ -191,8 +167,7 @@ const hasMerge = (changes) => {
 const singlePull = async (pwd, caName) => {
   const wpPath = await getWorkspacePath(pwd)
   const { token, cas: rawCas } = await getBmc(wpPath);
-  const cas = await checkMigration(rawCas, pwd, wpPath);
-  if (cas === null) return false;
+  const cas = rawCas;
   const { changes, status } = await getStatus.getSingleStatusChanges(pwd, caName);
   const newCas = await makeChanges(wpPath, cas, status, changes);
   if(newCas === cas) {
@@ -206,8 +181,7 @@ const singlePull = async (pwd, caName) => {
 const completePull = async (pwd) => {
   const wpPath = await getWorkspacePath(pwd)
   const { token, cas: rawCas } = await getBmc(wpPath);
-  const cas = await checkMigration(rawCas, pwd, wpPath);
-  if (cas === null) return false;
+  const cas = rawCas;
   const changesGenerator = getStatus.getStatusChanges(pwd);
   let newCas = cas;
   let withMerges = false;
