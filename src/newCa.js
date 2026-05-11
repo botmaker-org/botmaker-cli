@@ -92,16 +92,15 @@ main()
 `;
 
 const createFileAndStatus = async (wpPath, ca, type, openVsCode) => {
-  const remoteFolder = ca.folder || '';
   const baseName = importWorkspace.formatName(ca.name);
   const ext = type === CaType.AI_FUNCTION ? 'ts' : 'js';
   const typeFolder = getTypeFolder(type);
   const targetDir = typeFolder
-    ? path.join(wpPath, 'src', typeFolder, remoteFolder)
-    : path.join(wpPath, remoteFolder);
+    ? path.join(wpPath, 'src', typeFolder)
+    : path.join(wpPath, 'src');
   await fse.ensureDir(targetDir);
   const basename = await importWorkspace.getName(targetDir, baseName, ext);
-  const newFileName = buildLocalRelPath(type, remoteFolder, basename);
+  const newFileName = buildLocalRelPath(type, basename);
 
   const filePath = path.join(wpPath, newFileName);
   await writeFile(filePath, ca.publishedCode, 'UTF-8');
@@ -112,7 +111,6 @@ const createFileAndStatus = async (wpPath, ca, type, openVsCode) => {
   return {
     ...ca,
     filename: newFileName,
-    folder: remoteFolder,
   };
 }
 
