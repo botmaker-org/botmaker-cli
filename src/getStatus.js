@@ -8,7 +8,6 @@ const { getBmc } = require('./bmcConfig');
 const getWorkspacePath = require('./getWorkspacePath');
 const {
   getTypeFolder,
-  extractFolderFromFilename,
   extractBasename,
   TYPE_FOLDERS,
 } = require('./caTypes');
@@ -115,20 +114,6 @@ const ChangeType = {
     'red',
     (s) => [s.t, s.T]
   ),
-  FOLDER_CHANGED: new ChangeStatusType(
-    "Folder changed",
-    'Fc',
-    '!XP !Xp !Dd',
-    'yellow',
-    (s) => [s.d || '', s.D || '']
-  ),
-  LOCAL_FOLDER_CHANGED: new ChangeStatusType(
-    "Local folder changed",
-    'Lf',
-    '!XP !Xp !Xg !dg',
-    'cyan',
-    (s) => [s.d || '', s.g || '']
-  ),
   NEW_CA: new ChangeStatusType(
     "New ca was created",
     'Nc',
@@ -145,10 +130,9 @@ const ChangeType = {
 [F]ile
 [N]ame
 [T]ype
-[D] folder
 
-Remote = UPPERCASE -> P U   N T D
-Local = lowercase  -> p u f n t d g  (g = local-derived folder from current file location)
+Remote = UPPERCASE -> P U N T
+Local = lowercase  -> p u f n t
 
 [X] = Nothing
 [!] = Not ... [!X] = Something
@@ -276,7 +260,7 @@ const getCaByNameOrPath = async (wpPath, cas, caName) => {
 const getLocalStatus = async (wpPath, ca) => {
   if (!ca.filename) {
     return {
-      p: null, t: null, f: null, u: null, n: null, id: ca.id, fn: null, d: null, g: null
+      p: null, t: null, f: null, u: null, n: null, id: ca.id, fn: null
     }; // noLocal
   }
 
@@ -311,23 +295,20 @@ const getLocalStatus = async (wpPath, ca) => {
   const n = ca.name != null ? ca.name : null;
   const t = ca.type != null ? ca.type : null;
   const id = ca.id != null ? ca.id : null;
-  const d = ca.folder != null ? ca.folder : '';
-  const g = existFile ? extractFolderFromFilename(actualRel, ca.type) : null;
-  return { p, t, f, u, n, id, fn: actualRel, d, g };
+  return { p, t, f, u, n, id, fn: actualRel };
 }
 
-const NO_REMOTE = { P: null, U: null, N: null, T: null, D: null }
+const NO_REMOTE = { P: null, U: null, N: null, T: null }
 const getRemoteStatus = async (token, id) => {
   if (!id) return NO_REMOTE;
   try {
     const caResp = await getCa(token, id);
-    const { name, type, publishedCode, unPublishedCode, folder } = JSON.parse(caResp.body);
+    const { name, type, publishedCode, unPublishedCode } = JSON.parse(caResp.body);
     return {
       N: name,
       T: type,
       P: publishedCode,
       U: unPublishedCode != null ? unPublishedCode : null,
-      D: folder != null ? folder : '',
     }
   } catch (e) {
     // will asume is deleted ... FIX !
@@ -342,13 +323,12 @@ const findRemoteStatus = (remotesCas, id) => {
   if (!caResp) {
     return NO_REMOTE;
   }
-  const { name, type, publishedCode, unPublishedCode, folder } = caResp;
+  const { name, type, publishedCode, unPublishedCode } = caResp;
   return {
     N: name,
     T: type,
     P: publishedCode,
     U: unPublishedCode != null ? unPublishedCode : null,
-    D: folder != null ? folder : '',
   }
 }
 
