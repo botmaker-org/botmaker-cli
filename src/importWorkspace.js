@@ -78,17 +78,15 @@ const importWorkspace = async (pwd, apiToken) => {
   await copyAll(baseTemplate, workspacePath);
   await writeFile(path.join(workspacePath, "context.json"), JSON.stringify(context, null, 4), "UTF-8");
   for (const ca of cas) {
-    const remoteFolder = ca.folder || '';
     const baseName = formatName(ca.name);
     const ext = ca.type === CaType.AI_FUNCTION ? 'ts' : 'js';
     const typeFolder = getTypeFolder(ca.type);
     const targetDir = typeFolder
-      ? path.join(workspacePath, 'src', typeFolder, remoteFolder)
-      : path.join(workspacePath, remoteFolder);
+      ? path.join(workspacePath, 'src', typeFolder)
+      : workspacePath;
     await fse.ensureDir(targetDir);
     const basename = await getName(targetDir, baseName, ext);
-    ca.filename = buildLocalRelPath(ca.type, remoteFolder, basename);
-    ca.folder = remoteFolder;
+    ca.filename = buildLocalRelPath(ca.type, basename);
     await writeFile(path.join(workspacePath, ca.filename), ca.unPublishedCode || ca.publishedCode, "UTF-8");
   }
   const bmc = {
