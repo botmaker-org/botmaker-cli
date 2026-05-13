@@ -9,7 +9,6 @@ const setCustomer = require('./setCustomer');
 const getStatus = require('./getStatus');
 const publish = require('./publish');
 const rename = require('./rename');
-const reset = require('./reset');
 const listCas = require('./listCas');
 const CaType = require('./caTypes');
 const setSchedule = require('./setSchedule');
@@ -99,10 +98,6 @@ const main = async (args) => {
       ['set-schedule <caName> <cronString>'],
       'Set the cron schedule on a SCHEDULE type client action'
     )
-    .command(
-      ['reset'],
-      'Reset local workspace state (chat.json, catalog.json)',
-    )
     .demandCommand()
     .help('h')
     .alias('h', 'help')
@@ -162,9 +157,6 @@ const main = async (args) => {
     case "set-schedule":
       const { caName: caName7, cronString } = arrgs;
       await setSchedule(pwd, caName7, cronString);
-      break;
-    case "reset":
-      await reset(pwd);
       break;
     case "run":
     case "r":

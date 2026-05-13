@@ -17,7 +17,6 @@
 | `bmc diff <name> <code>` | `bmc d` | Diff local vs remote |
 | `bmc rename <name> <newName>` | | Rename a client action |
 | `bmc set-schedule <name> <cronString>` | | Set the cron schedule on a SCHEDULE type CA |
-| `bmc reset` | | Reset local workspace state (chat.json, catalog.json) |
 
 ### `bmc new` flags
 
