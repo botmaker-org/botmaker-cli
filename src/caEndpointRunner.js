@@ -72,9 +72,6 @@ const ___runMain = (
 
 module.exports = (req, res, token, code, helpers, filePath) => {
     const chalk = require('chalk');
-    const __redisLib__ = require('redis');
-    bluebird.promisifyAll(__redisLib__.RedisClient.prototype);
-    bluebird.promisifyAll(__redisLib__.Multi.prototype);
 
     const __parceStackTrace = (error) => {
         if (error.stack) {
@@ -107,23 +104,6 @@ module.exports = (req, res, token, code, helpers, filePath) => {
                 )
             });
 
-        const connectRedis = () => {
-            const redis = __redisLib__.createClient(6379, 'redis.botmaker.com', {
-                password: token,
-                socket_keepalive: false,
-                retry_strategy: (options) => {
-                    if (options.attempt > 4) return undefined; // end reconnecting with built in error
-                    return options.attempt * 100; // reconnect after
-                }
-            });
-
-            redis.on("error", function (err) {
-                console.error("Node-redis client error: " + err);
-            });
-            // redis.unref(); // allowing the program to exit once no more commands are pending
-            return redis;
-        };
-
         req.db = {
             get: async k => {
                 const lkd22lakd2 = await fetch('https://us-west1-m-infra.cloudfunctions.net/code_action_pair/get', {headers: {o:'api',k, t:token}});
@@ -151,16 +131,6 @@ module.exports = (req, res, token, code, helpers, filePath) => {
             }
         };
 
-        req.connectRedis = connectRedis;
-        ___runMain(
-            {
-                req,
-                res,
-                bmconsole,
-            },
-            code,
-            filePath,
-            helpers);
     } catch (__executionErrors__) {
         console.error(__executionErrors__);
         res.status(500).send(JSON.stringify(__executionErrors__));

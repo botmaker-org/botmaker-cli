@@ -6,7 +6,6 @@
     "enable": true,
     "include": [
       "request-promise",
-      "redis",
       "./context.json",
       "fs",
       "lodash",

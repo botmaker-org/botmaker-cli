@@ -12,12 +12,11 @@ const { createCa } = require("./bmService");
 const writeFile = util.promisify(fs.writeFile);
 
 const baseEndPointCa =
-`const redis = req.connectRedis();
+`
 
 const main = async () => {
   // TODO my code here
-  // const myVal = await redis.getAsync('myKey');
-  // return { id : myVal };
+  return { id : myVal };
 };
 
 main()
@@ -35,7 +34,6 @@ main()
     res.write(\`<p style="color: red">ERROR!!!<br>\${err.message}</p>\`);
   }).finally(() => {
     res.end();
-    redis.quit();
   });
 `
 
