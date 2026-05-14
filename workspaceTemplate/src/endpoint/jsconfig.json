@@ -6,7 +6,7 @@
     "enable": true,
     "include": [
       "request-promise",
-      "./context.json",
+      "redis",
       "fs",
       "lodash",
       "moment",
@@ -24,8 +24,9 @@
     ]
   },
   "include": [
-    "index.d.ts",
-    "endpoint.d.ts",
-    "context.json"
+    "./**/*.js",
+    "../../index.d.ts",
+    "../../endpoint.d.ts",
+    "../../context.json"
   ]
 }

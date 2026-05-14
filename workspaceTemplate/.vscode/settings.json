@@ -1,4 +1,8 @@
 {
   "editor.tabSize": 2,
-  "javascript.suggest.autoImports": false
+  "javascript.suggest.autoImports": false,
+  "files.readonlyInclude": {
+    "src/**/jsconfig.json": true,
+    "src/**/tsconfig.json": true
+  }
 }

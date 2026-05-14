@@ -8,9 +8,30 @@ const { getBmc } = require('./bmcConfig');
 const getWorkspacePath = require('./getWorkspacePath');
 const getDiff = require("./getDiff");
 const importWorkspace = require("./importWorkspace");
+const CaType = require('./caTypes');
+const { getTypeFolder, buildLocalRelPath } = require('./caTypes');
+const fse = require('fs-extra');
 
 const writeFile = util.promisify(fs.writeFile);
 const rm = util.promisify(fs.unlink);
+
+const targetDirForNew = (wpPath, type) => {
+  const typeFolder = getTypeFolder(type);
+  return typeFolder
+    ? path.join(wpPath, 'src', typeFolder)
+    : wpPath;
+};
+
+const createNewFile = async (wpPath, status, content) => {
+  const baseName = importWorkspace.formatName(status.N);
+  const ext = status.T === CaType.AI_FUNCTION ? 'ts' : 'js';
+  const targetDir = targetDirForNew(wpPath, status.T);
+  await fse.ensureDir(targetDir);
+  const basename = await importWorkspace.getName(targetDir, baseName, ext);
+  const newFileName = buildLocalRelPath(status.T, basename);
+  await writeFile(path.join(wpPath, newFileName), content, 'UTF-8');
+  return newFileName;
+};
 
 const makeChanges = async (wpPath, cas, status, changes) => {
   const notAdded = changes.includes(getStatus.ChangeType.NOT_ADDED);
@@ -28,13 +49,13 @@ const makeChanges = async (wpPath, cas, status, changes) => {
     return cas;
   }
   if (hasLocalChanges && removeRemote) {
-    console.log(chalk.bgRed(`WARNING: ${path.join(wpPath, 'src', status.fn)} has local changes but was deleted remotly.`));
+    console.log(chalk.bgRed(`WARNING: ${path.join(wpPath, status.fn)} has local changes but was deleted remotly.`));
     return cas;
   }
 
   if (removeRemote) {
-    console.log(chalk.red(`${path.join(wpPath, 'src', status.fn)} was deleted`));
-    await rm(path.join(wpPath, 'src', status.fn))
+    console.log(chalk.red(`${path.join(wpPath, status.fn)} was deleted`));
+    await rm(path.join(wpPath, status.fn))
     return cas.filter(ca => ca.id !== status.id);
 
   } else if (hasLocalChanges && hasIncomingChanges) {
@@ -42,35 +63,29 @@ const makeChanges = async (wpPath, cas, status, changes) => {
     const original = status.u || status.p;
     const local = status.f;
     const { conflict, result } = getDiff.getMerge(local, original, remote);
+
     if (conflict) {
-      console.log(chalk.bgRed(`WARNING: ${path.join(wpPath, 'src', status.fn)} has merge conflicts`));
+      console.log(chalk.bgRed(`WARNING: ${path.join(wpPath, status.fn)} has merge conflicts`));
     } else {
-      console.log(chalk.yellow(`WARNING: ${path.join(wpPath, 'src', status.fn)} was merged automatically`));
+      console.log(chalk.yellow(`WARNING: ${path.join(wpPath, status.fn)} was merged automatically`));
     }
-    await writeFile(path.join(wpPath, 'src', status.fn), result, 'UTF-8');
+    await writeFile(path.join(wpPath, status.fn), result, 'UTF-8');
   } else if (hasIncomingChanges) {
     const newVersion = status.U || status.P;
 
     if (status.fn) {
-      console.log(chalk.green(`${path.join(wpPath, 'src', status.fn)} has changes`));
-      await writeFile(path.join(wpPath, 'src', status.fn), newVersion, 'UTF-8');
+      console.log(chalk.green(`${path.join(wpPath, status.fn)} has changes`));
+      await writeFile(path.join(wpPath, status.fn), newVersion, 'UTF-8');
     } else {
-      // new File
-      const baseName = importWorkspace.formatName(status.N);
-      const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, 'js');
-
-      await writeFile(path.join(wpPath, 'src', newFileName), newVersion, 'UTF-8');
+      // CA was tracked in .bmc but the local file was missing — re-create it.
+      const newFileName = await createNewFile(wpPath, status, newVersion);
       status.fn = newFileName;
-      console.log(chalk.green(`${path.join(wpPath, 'src', status.fn)} was added`));
+      console.log(chalk.green(`${path.join(wpPath, status.fn)} was added`));
     }
   } else if (wasAdded) {
     const newVersion = status.U || status.P;
-    // new File
-    const baseName = importWorkspace.formatName(status.N);
-    const newFileName = await importWorkspace.getName(path.join(wpPath, 'src'), baseName, 'js');
-
-    await writeFile(path.join(wpPath, 'src', newFileName), newVersion, 'UTF-8');
-    console.log(chalk.green(`${path.join(wpPath, 'src', newFileName)} was added`));
+    const newFileName = await createNewFile(wpPath, status, newVersion);
+    console.log(chalk.green(`${path.join(wpPath, newFileName)} was added`));
     return cas.concat({
       publishedCode: status.P,
       unPublishedCode: status.U,

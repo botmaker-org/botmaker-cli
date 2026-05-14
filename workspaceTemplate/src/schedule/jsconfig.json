@@ -6,7 +6,7 @@
     "enable": true,
     "include": [
       "request-promise",
-      "./context.json",
+      "redis",
       "fs",
       "lodash",
       "moment",
@@ -19,13 +19,12 @@
       "@turf/helpers",
       "jsonwebtoken",
       "bluebird",
-      "googleapis",
-      "express"
+      "googleapis"
     ]
   },
   "include": [
-    "index.d.ts",
-    "endpoint.d.ts",
-    "context.json"
+    "./**/*.js",
+    "../../index.d.ts",
+    "../../context.json"
   ]
 }

@@ -8,8 +8,8 @@ const chalk = require("chalk");
 const {ChangeType} = getStatus;
 
 const hasIncomingChanges = (changes) => {
-  return changes.some(c => 
-    c === ChangeType.INCOMING_CHANGES 
+  return changes.some(c =>
+    c === ChangeType.INCOMING_CHANGES
     || c === ChangeType.REMOVE_REMOTE
     || c === ChangeType.NEW_CA
     || c === ChangeType.RENAMED
@@ -18,8 +18,8 @@ const hasIncomingChanges = (changes) => {
 }
 
 const hasLocalChanges = (changes) => {
-  return changes.some(c => 
-    c === ChangeType.LOCAL_CHANGES 
+  return changes.some(c =>
+    c === ChangeType.LOCAL_CHANGES
   );
 }
 

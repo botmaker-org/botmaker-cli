@@ -6,6 +6,11 @@ const chalk = require('chalk');
 const { getAllCas, getCa } = require('./bmService')
 const { getBmc } = require('./bmcConfig');
 const getWorkspacePath = require('./getWorkspacePath');
+const {
+  getTypeFolder,
+  extractBasename,
+  TYPE_FOLDERS,
+} = require('./caTypes');
 
 const readFile = util.promisify(fs.readFile);
 const exists = util.promisify(fs.exists);
@@ -126,7 +131,7 @@ const ChangeType = {
 [N]ame
 [T]ype
 
-Remote = UPPERCASE -> P U   N T
+Remote = UPPERCASE -> P U N T
 Local = lowercase  -> p u f n t
 
 [X] = Nothing
@@ -136,6 +141,63 @@ Local = lowercase  -> p u f n t
 */
 const posibleChanges = Object.values(ChangeType);
 
+const ROOT_SCAN_EXCLUDES = new Set([
+  '.bmc', 'src', 'context.json', 'package.json',
+  'package-lock.json', 'jsconfig.json', 'index.d.ts', 'endpoint.d.ts',
+  'mcp.d.ts',
+  'README.md', 'node_modules', '.vscode', '.git', '.gitignore',
+]);
+
+const SRC_SCAN_EXCLUDES = new Set(['jsconfig.json', 'tsconfig.json']);
+
+const findFileByBasename = async (rootPath, basename) => {
+  const matches = [];
+  if (!(await exists(rootPath))) return matches;
+  const entries = await readdir(rootPath, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+    const sub = path.join(rootPath, entry.name);
+    if (entry.isDirectory()) {
+      const inner = await findFileByBasename(sub, basename);
+      matches.push(...inner.map(m => `${entry.name}/${m}`));
+    } else if (entry.isFile() && entry.name === basename) {
+      matches.push(entry.name);
+    }
+  }
+  return matches;
+};
+
+async function* walkRel(rootPath, prefix, excludes) {
+  if (!(await exists(rootPath))) return;
+  const entries = await readdir(rootPath, { withFileTypes: true });
+  for (const entry of entries) {
+    if (excludes && excludes.has(entry.name)) continue;
+    if (entry.name.startsWith('.')) continue;
+    const sub = path.join(rootPath, entry.name);
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      yield* walkRel(sub, rel);
+    } else if (entry.isFile()) {
+      yield rel;
+    }
+  }
+}
+
+async function* walkAllLocalCaFiles(wpPath, cas) {
+  for (const folder of TYPE_FOLDERS) {
+    const folderPath = path.join(wpPath, 'src', folder);
+    if (await exists(folderPath)) {
+      yield* walkRel(folderPath, `src/${folder}`, SRC_SCAN_EXCLUDES);
+    }
+  }
+  // Workspace-root scan only when an unmapped-type CA already exists,
+  // to avoid false NOT_ADDED for unrelated files at the root.
+  const hasUnmapped = cas.some(c => c.type && getTypeFolder(c.type) == null);
+  if (hasUnmapped) {
+    yield* walkRel(wpPath, '', ROOT_SCAN_EXCLUDES);
+  }
+}
+
 const getCaPath = async (wpPath, caName) => {
   const posiblePaths = [
     caName,
@@ -143,12 +205,18 @@ const getCaPath = async (wpPath, caName) => {
     caName && path.join(wpPath, 'src', caName),
     caName && path.join(wpPath, caName + ".js"),
     caName && path.join(wpPath, 'src', caName + ".js"),
+    caName && path.join(wpPath, caName + ".ts"),
+    caName && path.join(wpPath, 'src', caName + ".ts"),
+    ...TYPE_FOLDERS.map(f => caName && path.join(wpPath, 'src', f, caName)),
+    ...TYPE_FOLDERS.map(f => caName && path.join(wpPath, 'src', f, caName + ".js")),
+    ...TYPE_FOLDERS.map(f => caName && path.join(wpPath, 'src', f, caName + ".ts")),
   ];
 
-  for (const path of posiblePaths) {
-    if (!path) continue;
-    if (await exists(path)) {
-      return path;
+  for (const p of posiblePaths) {
+    if (!p) continue;
+    if (await exists(p)) {
+      const stat = await util.promisify(fs.stat)(p);
+      if (stat.isFile()) return p;
     }
   }
   return null;
@@ -157,27 +225,34 @@ const getCaPath = async (wpPath, caName) => {
 const getCaByNameOrPath = async (wpPath, cas, caName) => {
   if (!caName) return
   if (path.isAbsolute(caName)) {
-    return cas.find(ca => path.relative(path.join(wpPath, 'src', ca.filename), caName) === '');
+    return cas.find(ca => path.relative(path.join(wpPath, ca.filename), caName) === '');
   }
-  
+
   const byName = cas.find(ca => ca.name === caName);
   if (byName) {
     return byName;
   }
 
-  const byPath = cas.find(ca => path.relative(path.join(wpPath, 'src', ca.filename), path.join(wpPath, 'src', caName)) === '');
+  const byPath = cas.find(ca => path.relative(path.join(wpPath, ca.filename), path.join(wpPath, caName)) === '');
   if (byPath) {
     return byPath;
   }
 
-  const byFileName = cas.find(ca => ca.filename === caName || ca.filename === caName + ".js");
+  const byFileName = cas.find(ca => {
+    const base = path.basename(ca.filename || '');
+    return ca.filename === caName
+      || base === caName
+      || base === caName + ".js"
+      || base === caName + ".ts";
+  });
   if (byFileName) {
     return byFileName;
   }
 
-  const nonAdded = await getCaPath(wpPath,caName);
-  if(nonAdded){
-    return {filename: path.basename(nonAdded)}
+  const nonAdded = await getCaPath(wpPath, caName);
+  if (nonAdded) {
+    const relative = path.relative(wpPath, nonAdded).split(path.sep).join('/');
+    return { filename: relative }
   }
   throw new Error(`'${caName}' not found`);
 }
@@ -185,22 +260,42 @@ const getCaByNameOrPath = async (wpPath, cas, caName) => {
 const getLocalStatus = async (wpPath, ca) => {
   if (!ca.filename) {
     return {
-      p: null, t: null, f: null, u: null, n: null, id: ca.id, fn : null
+      p: null, t: null, f: null, u: null, n: null, id: ca.id, fn: null
     }; // noLocal
   }
-  const filePath = ca.filename && path.join(wpPath,'src',ca.filename);
-  const existFile = filePath && await exists(filePath);
+
+  const cachedRel = ca.filename;
+  let actualRel = cachedRel;
+  let filePath = path.join(wpPath, cachedRel);
+  let existFile = await exists(filePath);
+
+  if (!existFile) {
+    const basename = extractBasename(cachedRel);
+    const typeFolder = ca.type ? getTypeFolder(ca.type) : null;
+    const searchRoot = typeFolder
+      ? path.join(wpPath, 'src', typeFolder)
+      : wpPath;
+    const searchRel = typeFolder ? `src/${typeFolder}` : '';
+    const matches = await findFileByBasename(searchRoot, basename);
+    if (matches.length === 1) {
+      actualRel = (searchRel ? `${searchRel}/` : '') + matches[0];
+      filePath = path.join(wpPath, actualRel);
+      existFile = true;
+    } else if (matches.length > 1) {
+      console.log(chalk.yellow(`WARNING: multiple files match basename '${basename}' under ${searchRoot}; keeping cached path for '${ca.name}'`));
+    }
+  }
+
   const f = existFile ? await readFile(filePath, 'UTF-8') : null;
-  if (f && f.search(/(^<<<<<<<|^========|^>>>>>>>)/gm) !== -1){
+  if (f && f.search(/(^<<<<<<<|^========|^>>>>>>>)/gm) !== -1) {
     throw new Error(`The file ${filePath} has unresolved merge conflicts`);
   }
-  const p = ca ? ca.publishedCode : null;
-  const u = ca && ca.unPublishedCode != null ? ca.unPublishedCode : null;
-  const n = ca ? ca.name : null;
-  const t = ca ? ca.type : null;
-  const id = ca ? ca.id : null;
-  const fn = ca ? ca.filename : null;
-  return { p, t, f, u, n, id, fn};
+  const p = ca.publishedCode != null ? ca.publishedCode : null;
+  const u = ca.unPublishedCode != null ? ca.unPublishedCode : null;
+  const n = ca.name != null ? ca.name : null;
+  const t = ca.type != null ? ca.type : null;
+  const id = ca.id != null ? ca.id : null;
+  return { p, t, f, u, n, id, fn: actualRel };
 }
 
 const NO_REMOTE = { P: null, U: null, N: null, T: null }
@@ -209,7 +304,12 @@ const getRemoteStatus = async (token, id) => {
   try {
     const caResp = await getCa(token, id);
     const { name, type, publishedCode, unPublishedCode } = JSON.parse(caResp.body);
-    return { N: name, T: type, P: publishedCode, U: unPublishedCode != null ? unPublishedCode : null }
+    return {
+      N: name,
+      T: type,
+      P: publishedCode,
+      U: unPublishedCode != null ? unPublishedCode : null,
+    }
   } catch (e) {
     // will asume is deleted ... FIX !
     console.error(e)
@@ -224,14 +324,19 @@ const findRemoteStatus = (remotesCas, id) => {
     return NO_REMOTE;
   }
   const { name, type, publishedCode, unPublishedCode } = caResp;
-  return { N: name, T: type, P: publishedCode, U: unPublishedCode != null ? unPublishedCode : null }
+  return {
+    N: name,
+    T: type,
+    P: publishedCode,
+    U: unPublishedCode != null ? unPublishedCode : null,
+  }
 }
 
 const getStatusData = async (wpPath, ca, remoteOrToken) => {
   const localStatus = await getLocalStatus(wpPath, ca);
-  const remoteStatus = typeof remoteOrToken === 'string' 
+  const remoteStatus = typeof remoteOrToken === 'string'
     ? await getRemoteStatus(remoteOrToken, ca.id)
-    : Array.isArray(remoteOrToken) 
+    : Array.isArray(remoteOrToken)
     ? findRemoteStatus(remoteOrToken, ca.id)
     : {};
   return { ...remoteStatus, ...localStatus };
@@ -257,7 +362,7 @@ const showChanges = (changes, ca) => {
     const changesDesc = changes.map(ch => chalk[ch.color](ch.short)).join(' ');
     const caName = typeof ca === 'string' ? ca : ca.n || ca.N
     const caFileName = ca.fn
-    const caDesc = caFileName ? `${chalk.italic(caFileName)} ${caName ? chalk.gray(caName) : ''}` : caName; 
+    const caDesc = caFileName ? `${chalk.italic(caFileName)} ${caName ? chalk.gray(caName) : ''}` : caName;
     console.log(`${changesDesc}: ${caDesc}`);
   }
 }
@@ -271,7 +376,7 @@ const getSingleStatusChanges = async (pwd, caName) => {
   const { token, cas } = await getBmc(wpPath);
   const matchedCa = await getCaByNameOrPath(wpPath, cas, caName);
   if (!matchedCa){
-    
+
   }
   const status = await getStatusData(wpPath, matchedCa, token);
   const changes = getChangesFromStatus(status)
@@ -284,9 +389,12 @@ async function* getStatusChanges(pwd) {
   const remoteCasRes = await getAllCas(token);
   const remoteCas = JSON.parse(remoteCasRes.body);
   const newCas = remoteCas.filter(rca => cas.every(lca => lca.id !== rca.id));
-  const localCas = await readdir(path.join(wpPath, 'src'));
-  const newLocalCasFiles = localCas.map((ca) => path.basename(ca)).filter(filename => cas.every(lca => lca.filename !== filename));
-  const newLocalCas = newLocalCasFiles.map(filename => ({filename}))
+  const allLocalFiles = [];
+  for await (const f of walkAllLocalCaFiles(wpPath, cas)) {
+    allLocalFiles.push(f);
+  }
+  const newLocalCasFiles = allLocalFiles.filter(filename => cas.every(lca => lca.filename !== filename));
+  const newLocalCas = newLocalCasFiles.map(filename => ({ filename }))
   const allCas = [...cas, ...newCas, ...newLocalCas].sort((ca1, ca2) => {
     const c1 = ca1.name || ca1.filename;
     const c2 = ca2.name || ca2.filename;
