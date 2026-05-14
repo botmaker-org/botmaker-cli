@@ -130,7 +130,16 @@ module.exports = (req, res, token, code, helpers, filePath) => {
                 await fetch('https://us-west1-m-infra.cloudfunctions.net/code_action_pair/set', {headers: {o:'api',k, t: token, 'Content-Type': 'text/plain'}, method: 'POST', body: v});
             }
         };
-
+        ___runMain(
+            {
+                req,
+                res,
+                bmconsole,
+            },
+            code,
+            filePath,
+            helpers
+        );
     } catch (__executionErrors__) {
         console.error(__executionErrors__);
         res.status(500).send(JSON.stringify(__executionErrors__));
