@@ -3,7 +3,25 @@
     "resolveJsonModule": true
   },
   "typeAcquisition": {
-    "enable": true
+    "enable": true,
+    "include": [
+      "request-promise",
+      "./context.json",
+      "fs",
+      "lodash",
+      "moment",
+      "fast-csv",
+      "md5",
+      "js-sha256",
+      "xml2js",
+      "secure-random",
+      "@turf/turf",
+      "@turf/helpers",
+      "jsonwebtoken",
+      "bluebird",
+      "googleapis",
+      "express"
+    ]
   },
   "include": [
     "index.d.ts",
