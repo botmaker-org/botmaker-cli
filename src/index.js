@@ -1,3 +1,4 @@
+const { version } = require('../package.json');
 const getDiff = require('./getDiff');
 const newCa = require('./newCa');
 const pull = require('./pull');
@@ -92,7 +93,7 @@ const main = async (args) => {
     .demandCommand()
     .help('h')
     .alias('h', 'help')
-    .version("0.1.8")
+    .version(version)
     .epilog('copyright Botmaker 2022')
     .argv;
 
