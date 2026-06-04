@@ -1,13 +1,9 @@
 const path = require('path');
-const util = require('util');
-const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { getAllCas, getCustomerContext } = require('./bmService')
 const fse = require('fs-extra');
-const { getBmc } = require('./bmcConfig');
+const { getBmc, saveContext } = require('./bmcConfig');
 const getWorkspacePath = require('./getWorkspacePath');
-
-const writeFile = util.promisify(fs.writeFile);
 
 const setCustomer = async (pwd, customerId) => {
   const wpPath = await getWorkspacePath(pwd)
@@ -22,7 +18,7 @@ const setCustomer = async (pwd, customerId) => {
     }
   })();
   const context = JSON.parse(contextReq.body)
-  await writeFile(path.join(wpPath, "context.json"), JSON.stringify(context, null, 4), "UTF-8");
+  await saveContext(wpPath, context);
   const name = ((context.userData.FIRST_NAME || "") + " " + (context.userData.LAST_NAME || "")).trim();
   console.log(`now you are: ${name || customerId}`);
 }

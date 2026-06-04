@@ -4,6 +4,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { getAllCas, getCustomerContext } = require('./bmService')
 const fse = require('fs-extra');
+const { saveBmc, saveContext } = require('./bmcConfig');
 
 const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
@@ -74,7 +75,7 @@ const importWorkspace = async (pwd, apiToken) => {
   const bmcPath = path.join(__dirname, '..');
   const baseTemplate = path.join(bmcPath, 'workspaceTemplate');
   await copyAll(baseTemplate, workspacePath);
-  await writeFile(path.join(workspacePath, "context.json"), JSON.stringify(context, null, 4), "UTF-8");
+  await saveContext(workspacePath, context);
   await mkdir(path.join(workspacePath, 'src'));
   const srcFolder = path.join(workspacePath, "src");
   for (const ca of cas) {
@@ -82,11 +83,7 @@ const importWorkspace = async (pwd, apiToken) => {
     ca.filename = await getName(srcFolder, baseName, 'js');
     await writeFile(path.join(srcFolder, ca.filename), ca.unPublishedCode || ca.publishedCode, "UTF-8");
   }
-  const bmc = {
-    cas,
-    token: apiToken,
-  }
-  await writeFile(path.join(workspacePath, ".bmc"), JSON.stringify(bmc), "UTF-8");
+  await saveBmc(workspacePath, apiToken, cas);
 }
 
 importWorkspace.getName = getName;

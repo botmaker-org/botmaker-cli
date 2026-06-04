@@ -7,13 +7,12 @@ const path = require('path');
 const resolveRenderer = require('./resultRenderer');
 const chalk = require('chalk');
 const getWorkspacePath = require('./getWorkspacePath');
-const { getBmc } = require('./bmcConfig');
+const { getBmc, getContext, saveContext } = require('./bmcConfig');
 const express = require('express');
 const { getCaByNameOrPath } = require('./getStatus');
 const caEndpointRunner = require('./caEndpointRunner');
 
 const readFile = util.promisify(fs.readFile);
-const writeFile = util.promisify(fs.writeFile);
 const exists = util.promisify(fs.exists);
 
 const doubleArrayToObject = array => {
@@ -109,8 +108,7 @@ const runEndpointCa = async (wpPath, token, cas, ca, port) => {
 
 const runUserCa = async (wpPath, token, cas, ca, vars, params, volatile) => {
   const { code, helpers, filePath} = await getCodeAnHelpers(wpPath, cas, ca)
-  const contextJson = await readFile(path.join(wpPath, "context.json"), "utf8");
-  const context = JSON.parse(contextJson);
+  const context = await getContext(wpPath);
   const commandVars = doubleArrayToObject(vars);
   const commandParameters = doubleArrayToObject(params);
   context.userData.variables = { ...context.userData.variables, ...commandVars }
@@ -144,7 +142,7 @@ const runUserCa = async (wpPath, token, cas, ca, vars, params, volatile) => {
       console.log(chalk.green(` ✓ Success in ${endTime}ms`))
       if (!volatile) {
         const newContext = { ...context, userData: { ...context.userData, variables: { ...context.userData.variables, ...result.resultState.user } } }
-        await writeFile(path.join(wpPath, "context.json"), JSON.stringify(newContext, null, 4), 'utf-8');
+        await saveContext(wpPath, newContext);
       }
       //console.log(JSON.stringify(result));
     }

@@ -4,7 +4,7 @@ const util = require('util');
 const fs = require('fs');
 const chalk = require('chalk');
 
-const { getBmc } = require('./bmcConfig');
+const { getBmc, saveBmc } = require('./bmcConfig');
 const getWorkspacePath = require('./getWorkspacePath');
 const getDiff = require("./getDiff");
 const importWorkspace = require("./importWorkspace");
@@ -106,7 +106,7 @@ const singlePull = async (pwd, caName) => {
     console.log(chalk.green('Already up to date. :)'));
     return false;
   }
-  await writeFile(path.join(wpPath, '.bmc'), JSON.stringify({ token, cas: newCas }), 'UTF-8');
+  await saveBmc(wpPath, token, newCas);
   return hasMerge(changes);
 }
 
@@ -125,7 +125,7 @@ const completePull = async (pwd) => {
     console.log(chalk.green('Already up to date. :)'));
     return false;
   }
-  await writeFile(path.join(wpPath, '.bmc'), JSON.stringify({ token, cas: newCas }), 'UTF-8');
+  await saveBmc(wpPath, token, newCas);
   return withMerges;
 }
 

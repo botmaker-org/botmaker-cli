@@ -90,7 +90,7 @@ const main = async (args) => {
     .help('h')
     .alias('h', 'help')
     .version(version)
-    .epilog('copyright Botmaker 2022')
+    .epilog('copyright Botmaker 2026')
     .argv;
 
   switch (arrgs._[0]) {
